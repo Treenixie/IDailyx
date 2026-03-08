@@ -1,15 +1,21 @@
 import customtkinter as ctk
+from functools import partial
+
+from core.storage import save_ideas
+from ui.dialogs import IdeaDialog
 
 
 class MainWindow(ctk.CTk):
-    def __init__(self, ideas: list[dict]):
+    def __init__(self, idea_manager, data_file: str):
         super().__init__()
 
         self.title("IDailyx")
         self.geometry("1400x800")
         self.minsize(1100, 650)
 
-        self.ideas = ideas
+        self.idea_manager = idea_manager
+        self.data_file = data_file
+        self.ideas = self.idea_manager.get_all()
         self.selected_idea = None
 
         ctk.set_appearance_mode("dark")
@@ -59,7 +65,11 @@ class MainWindow(ctk.CTk):
         )
         self.search_entry.grid(row=0, column=1, padx=10, pady=14, sticky="ew")
 
-        self.new_button = ctk.CTkButton(self.top_bar, text="+ Новая идея")
+        self.new_button = ctk.CTkButton(
+            self.top_bar,
+            text="+ Новая идея",
+            command=self.open_add_dialog
+        )
         self.new_button.grid(row=0, column=2, padx=10, pady=14)
 
         self.random_button = ctk.CTkButton(self.top_bar, text="Случайная идея")
@@ -126,6 +136,17 @@ class MainWindow(ctk.CTk):
         for widget in self.idea_listbox.winfo_children():
             widget.destroy()
 
+        self.ideas = self.idea_manager.get_all()
+
+        if not self.ideas:
+            empty_label = ctk.CTkLabel(
+                self.idea_listbox,
+                text="Идей пока нет. Добавь первую через кнопку «+ Новая идея».",
+                text_color="#aeb7c5"
+            )
+            empty_label.pack(anchor="w", padx=8, pady=8)
+            return
+
         for idea in self.ideas:
             card = ctk.CTkFrame(self.idea_listbox, corner_radius=14, fg_color="#242936")
             card.pack(fill="x", padx=4, pady=6)
@@ -152,10 +173,15 @@ class MainWindow(ctk.CTk):
             )
             hook.pack(anchor="w", padx=12, pady=(2, 10))
 
-            card.bind("<Button-1>", lambda event, current_idea=idea: self.show_idea_details(current_idea))
-            title.bind("<Button-1>", lambda event, current_idea=idea: self.show_idea_details(current_idea))
-            subtitle.bind("<Button-1>", lambda event, current_idea=idea: self.show_idea_details(current_idea))
-            hook.bind("<Button-1>", lambda event, current_idea=idea: self.show_idea_details(current_idea))
+            click_handler = partial(self._handle_idea_click, idea)
+
+            card.bind("<Button-1>", click_handler)
+            title.bind("<Button-1>", click_handler)
+            subtitle.bind("<Button-1>", click_handler)
+            hook.bind("<Button-1>", click_handler)
+
+    def _handle_idea_click(self, idea: dict, event=None):
+        self.show_idea_details(idea)
 
     def show_idea_details(self, idea: dict):
         self.selected_idea = idea
@@ -182,3 +208,13 @@ class MainWindow(ctk.CTk):
         self.details_text.delete("1.0", "end")
         self.details_text.insert("1.0", details)
         self.details_text.configure(state="disabled")
+
+    def open_add_dialog(self):
+        IdeaDialog(self, self.handle_add_idea)
+
+    def handle_add_idea(self, idea_data: dict):
+        new_idea = self.idea_manager.add_idea(idea_data)
+        save_ideas(self.data_file, self.idea_manager.get_all())
+
+        self._fill_idea_list()
+        self.show_idea_details(new_idea)

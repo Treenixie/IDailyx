@@ -1,5 +1,9 @@
 import os
 
+os.environ["TCL_LIBRARY"] = r"C:\Users\AnnBe\AppData\Local\Programs\Python\Python313\tcl\tcl8.6"
+os.environ["TK_LIBRARY"] = r"C:\Users\AnnBe\AppData\Local\Programs\Python\Python313\tcl\tk8.6"
+
+from core.idea_manager import IdeaManager
 from core.storage import load_ideas, ensure_data_file
 from ui.main_window import MainWindow
 
@@ -21,5 +25,7 @@ def bootstrap_data():
 
 if __name__ == "__main__":
     ideas = bootstrap_data()
-    app = MainWindow(ideas)
+    manager = IdeaManager(ideas)
+
+    app = MainWindow(manager, DATA_FILE)
     app.mainloop()
