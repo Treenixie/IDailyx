@@ -6,7 +6,6 @@ from core.storage import load_ideas, ensure_data_file
 
 
 DATA_FILE = "data/ideas.json"
-DEMO_FILE = "data/ideas_demo.json"
 
 
 def configure_tk_environment():
@@ -46,13 +45,7 @@ from ui.main_window import MainWindow
 
 def bootstrap_data():
     ensure_data_file(DATA_FILE)
-
-    ideas = load_ideas(DATA_FILE)
-
-    if not ideas and os.path.exists(DEMO_FILE):
-        ideas = load_ideas(DEMO_FILE)
-
-    return ideas
+    return load_ideas(DATA_FILE)
 
 
 if __name__ == "__main__":
