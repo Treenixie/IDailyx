@@ -1,6 +1,6 @@
 import customtkinter as ctk
 from functools import partial
-from tkinter import messagebox
+from tkinter import messagebox, filedialog
 
 from core.constants import STATUS_OPTIONS, READINESS_OPTIONS, MECHANICS
 from core.storage import save_ideas
@@ -17,6 +17,8 @@ from ui.styles import (
     DANGER_HOVER,
     FAVORITE,
     FAVORITE_HOVER,
+    BUTTON_NEUTRAL,
+    BUTTON_NEUTRAL_HOVER,
     get_status_color,
     get_sidebar_button_colors,
 )
@@ -103,10 +105,19 @@ class MainWindow(ctk.CTk):
             hover_color=ACCENT_HOVER,
             command=self.show_random_idea
         )
-        self.random_button.grid(row=0, column=3, padx=(0, 16), pady=(14, 8))
+        self.random_button.grid(row=0, column=3, padx=(0, 10), pady=(14, 8))
+
+        self.export_button = ctk.CTkButton(
+            self.top_bar,
+            text="Экспорт .txt",
+            fg_color=BUTTON_NEUTRAL,
+            hover_color=BUTTON_NEUTRAL_HOVER,
+            command=self.export_filtered_ideas
+        )
+        self.export_button.grid(row=0, column=4, padx=(0, 16), pady=(14, 8))
 
         filters_frame = ctk.CTkFrame(self.top_bar, fg_color="transparent")
-        filters_frame.grid(row=1, column=0, columnspan=4, sticky="ew", padx=16, pady=(0, 14))
+        filters_frame.grid(row=1, column=0, columnspan=5, sticky="ew", padx=16, pady=(0, 14))
 
         self.status_menu = ctk.CTkOptionMenu(
             filters_frame,
@@ -161,6 +172,16 @@ class MainWindow(ctk.CTk):
         )
         self.sort_menu.pack(side="right")
         self.sort_menu.set("Сначала новые")
+
+        self.reset_filters_button = ctk.CTkButton(
+            filters_frame,
+            text="Сбросить фильтры",
+            fg_color=BUTTON_NEUTRAL,
+            hover_color=BUTTON_NEUTRAL_HOVER,
+            command=self.reset_filters,
+            width=150
+        )
+        self.reset_filters_button.pack(side="right", padx=(0, 8))
 
     def _build_sidebar(self):
         title = ctk.CTkLabel(
@@ -351,6 +372,16 @@ class MainWindow(ctk.CTk):
         else:
             self.favorite_button.configure(state="normal", text="☆ В избранное")
 
+    def reset_filters(self):
+        self.search_entry.delete(0, "end")
+        self.status_menu.set("Все статусы")
+        self.readiness_menu.set("Вся проработка")
+        self.mechanic_menu.set("Все механики")
+        self.sort_menu.set("Сначала новые")
+        self.current_sidebar_filter = "Все идеи"
+        self._update_sidebar_button_styles()
+        self.apply_filters()
+
     def apply_filters(self):
         query = self.search_entry.get().strip()
 
@@ -525,3 +556,45 @@ class MainWindow(ctk.CTk):
             return
 
         self.show_idea_details(random_idea)
+
+    def export_filtered_ideas(self):
+        if not self.filtered_ideas:
+            messagebox.showwarning("Экспорт", "Нет идей для экспорта.")
+            return
+
+        file_path = filedialog.asksaveasfilename(
+            title="Сохранить экспорт идей",
+            defaultextension=".txt",
+            filetypes=[("Text files", "*.txt")],
+            initialfile="idailyx_export.txt"
+        )
+
+        if not file_path:
+            return
+
+        try:
+            with open(file_path, "w", encoding="utf-8") as file:
+                file.write("IDailyx — экспорт идей\n")
+                file.write("=" * 40 + "\n\n")
+
+                for index, idea in enumerate(self.filtered_ideas, start=1):
+                    file.write(f"{index}. {idea['title']}\n")
+                    file.write(f"   Ключевая фишка: {idea['hook']}\n")
+                    file.write(f"   Описание: {idea['short_description']}\n")
+                    file.write(f"   Жанр: {idea['genre']}\n")
+                    file.write(f"   Механика: {idea['mechanic']}\n")
+                    file.write(f"   Масштаб: {idea['scale']}\n")
+                    file.write(f"   Перспектива: {idea['perspective']}\n")
+                    file.write(f"   Платформа: {idea['platform']}\n")
+                    file.write(f"   Проработка: {idea['readiness']}\n")
+                    file.write(f"   Статус: {idea['status']}\n")
+                    file.write(f"   Теги: {', '.join(idea['tags']) if idea['tags'] else 'Нет'}\n")
+                    file.write(f"   Избранное: {'Да' if idea['favorite'] else 'Нет'}\n")
+                    file.write(f"   Дата создания: {idea['created_at']}\n")
+                    file.write(f"   Дата изменения: {idea['updated_at']}\n")
+                    file.write(f"   Заметки: {idea['notes'] if idea['notes'] else 'Нет'}\n")
+                    file.write("\n" + "-" * 40 + "\n\n")
+
+            messagebox.showinfo("Экспорт", "Идеи успешно экспортированы в .txt")
+        except OSError as error:
+            messagebox.showerror("Ошибка экспорта", f"Не удалось сохранить файл:\n{error}")
