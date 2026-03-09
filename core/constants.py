@@ -66,7 +66,6 @@ STATUS_OPTIONS = [
 DEFAULT_IDEA = {
     "id": "",
     "title": "",
-    "hook": "",
     "short_description": "",
     "genre": "Неотсортированные",
     "mechanic": "Не выбрано",

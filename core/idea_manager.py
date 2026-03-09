@@ -92,9 +92,9 @@ class IdeaManager:
 
             if query:
                 searchable_text = " ".join([
-                    idea["title"],
-                    idea["hook"],
-                    idea["short_description"],
+                    idea.get("title", ""),
+                    idea.get("short_description", ""),
+                    idea.get("notes", ""),
                 ]).lower()
 
                 if query not in searchable_text:
