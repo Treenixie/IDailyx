@@ -6,7 +6,7 @@
 ![GitHub](https://img.shields.io/badge/GitHub-181717?style=flat-square&logo=github&logoColor=white)
 
 **IDailyx** — десктопное приложение на **Python** для хранения, сортировки и редактирования игровых идей.  
-Интерфейс разработан с помощью **CustomTkinter**, данные сохраняются в **JSON**.
+Интерфейс разработан с помощью **CustomTkinter**, данные сохраняются в **JSON**, разработка велась в **PyCharm**.
 
 ## Запуск
 
