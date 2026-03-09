@@ -5,6 +5,21 @@ from tkinter import messagebox
 from core.constants import STATUS_OPTIONS, READINESS_OPTIONS, MECHANICS
 from core.storage import save_ideas
 from ui.dialogs import IdeaDialog
+from ui.styles import (
+    APP_BG,
+    PANEL_BG,
+    CARD_BG,
+    CARD_BORDER,
+    TEXT_SECONDARY,
+    ACCENT,
+    ACCENT_HOVER,
+    DANGER,
+    DANGER_HOVER,
+    FAVORITE,
+    FAVORITE_HOVER,
+    get_status_color,
+    get_sidebar_button_colors,
+)
 
 
 class MainWindow(ctk.CTk):
@@ -25,28 +40,29 @@ class MainWindow(ctk.CTk):
         ctk.set_appearance_mode("dark")
         ctk.set_default_color_theme("blue")
 
-        self.configure(fg_color="#16181d")
+        self.configure(fg_color=APP_BG)
 
         self._build_layout()
         self._update_sidebar_button_styles()
         self.apply_filters()
 
     def _build_layout(self):
-        self.grid_columnconfigure(1, weight=1)
-        self.grid_columnconfigure(2, weight=1)
+        self.grid_columnconfigure(0, minsize=220)
+        self.grid_columnconfigure(1, weight=1, uniform="content_columns")
+        self.grid_columnconfigure(2, weight=1, uniform="content_columns")
         self.grid_rowconfigure(1, weight=1)
 
-        self.top_bar = ctk.CTkFrame(self, corner_radius=16, fg_color="#1d2128")
+        self.top_bar = ctk.CTkFrame(self, corner_radius=16, fg_color=PANEL_BG)
         self.top_bar.grid(row=0, column=0, columnspan=3, sticky="nsew", padx=12, pady=(12, 6))
 
-        self.sidebar = ctk.CTkFrame(self, width=220, corner_radius=16, fg_color="#1d2128")
+        self.sidebar = ctk.CTkFrame(self, width=220, corner_radius=16, fg_color=PANEL_BG)
         self.sidebar.grid(row=1, column=0, sticky="nsew", padx=(12, 6), pady=(6, 12))
         self.sidebar.grid_propagate(False)
 
-        self.center_panel = ctk.CTkFrame(self, corner_radius=16, fg_color="#1d2128")
+        self.center_panel = ctk.CTkFrame(self, corner_radius=16, fg_color=PANEL_BG)
         self.center_panel.grid(row=1, column=1, sticky="nsew", padx=6, pady=(6, 12))
 
-        self.details_panel = ctk.CTkFrame(self, corner_radius=16, fg_color="#1d2128")
+        self.details_panel = ctk.CTkFrame(self, corner_radius=16, fg_color=PANEL_BG)
         self.details_panel.grid(row=1, column=2, sticky="nsew", padx=(6, 12), pady=(6, 12))
 
         self._build_top_bar()
@@ -74,6 +90,8 @@ class MainWindow(ctk.CTk):
         self.new_button = ctk.CTkButton(
             self.top_bar,
             text="+ Новая идея",
+            fg_color=ACCENT,
+            hover_color=ACCENT_HOVER,
             command=self.open_add_dialog
         )
         self.new_button.grid(row=0, column=2, padx=10, pady=(14, 8))
@@ -81,6 +99,8 @@ class MainWindow(ctk.CTk):
         self.random_button = ctk.CTkButton(
             self.top_bar,
             text="Случайная идея",
+            fg_color=ACCENT,
+            hover_color=ACCENT_HOVER,
             command=self.show_random_idea
         )
         self.random_button.grid(row=0, column=3, padx=(0, 16), pady=(14, 8))
@@ -92,7 +112,10 @@ class MainWindow(ctk.CTk):
             filters_frame,
             values=["Все статусы"] + STATUS_OPTIONS,
             command=self._on_filter_change,
-            width=170
+            width=170,
+            fg_color=ACCENT,
+            button_color=ACCENT,
+            button_hover_color=ACCENT_HOVER
         )
         self.status_menu.pack(side="left", padx=(0, 8))
         self.status_menu.set("Все статусы")
@@ -101,7 +124,10 @@ class MainWindow(ctk.CTk):
             filters_frame,
             values=["Вся проработка"] + READINESS_OPTIONS,
             command=self._on_filter_change,
-            width=190
+            width=190,
+            fg_color=ACCENT,
+            button_color=ACCENT,
+            button_hover_color=ACCENT_HOVER
         )
         self.readiness_menu.pack(side="left", padx=(0, 8))
         self.readiness_menu.set("Вся проработка")
@@ -110,7 +136,10 @@ class MainWindow(ctk.CTk):
             filters_frame,
             values=["Все механики"] + MECHANICS,
             command=self._on_filter_change,
-            width=210
+            width=210,
+            fg_color=ACCENT,
+            button_color=ACCENT,
+            button_hover_color=ACCENT_HOVER
         )
         self.mechanic_menu.pack(side="left", padx=(0, 8))
         self.mechanic_menu.set("Все механики")
@@ -125,7 +154,10 @@ class MainWindow(ctk.CTk):
                 "По названию (Я-А)",
             ],
             command=self._on_filter_change,
-            width=190
+            width=190,
+            fg_color=ACCENT,
+            button_color=ACCENT,
+            button_hover_color=ACCENT_HOVER
         )
         self.sort_menu.pack(side="right")
         self.sort_menu.set("Сначала новые")
@@ -158,8 +190,6 @@ class MainWindow(ctk.CTk):
                 self.sidebar,
                 text=category,
                 anchor="w",
-                fg_color="#242936",
-                hover_color="#2d3442",
                 command=partial(self.set_sidebar_filter, category)
             )
             button.pack(fill="x", padx=12, pady=4)
@@ -184,26 +214,52 @@ class MainWindow(ctk.CTk):
         )
         self.details_title.pack(anchor="w", padx=16, pady=(16, 8))
 
+        self.status_badge = ctk.CTkLabel(
+            self.details_panel,
+            text="",
+            fg_color=CARD_BORDER,
+            corner_radius=8,
+            padx=10,
+            pady=4
+        )
+        self.status_badge.pack(anchor="w", padx=16, pady=(0, 10))
+
         self.details_buttons_frame = ctk.CTkFrame(self.details_panel, fg_color="transparent")
         self.details_buttons_frame.pack(fill="x", padx=12, pady=(0, 8))
+
+        self.details_buttons_frame.grid_columnconfigure(0, weight=1, uniform="details_buttons")
+        self.details_buttons_frame.grid_columnconfigure(1, weight=1, uniform="details_buttons")
+        self.details_buttons_frame.grid_columnconfigure(2, weight=1, uniform="details_buttons")
 
         self.edit_button = ctk.CTkButton(
             self.details_buttons_frame,
             text="Редактировать",
+            fg_color=ACCENT,
+            hover_color=ACCENT_HOVER,
             command=self.open_edit_dialog,
             state="disabled"
         )
-        self.edit_button.pack(side="left", padx=(0, 8))
+        self.edit_button.grid(row=0, column=0, sticky="ew", padx=(0, 8))
 
         self.delete_button = ctk.CTkButton(
             self.details_buttons_frame,
             text="Удалить",
-            fg_color="#8B3A3A",
-            hover_color="#A04444",
+            fg_color=DANGER,
+            hover_color=DANGER_HOVER,
             command=self.delete_selected_idea,
             state="disabled"
         )
-        self.delete_button.pack(side="left")
+        self.delete_button.grid(row=0, column=1, sticky="ew", padx=(0, 8))
+
+        self.favorite_button = ctk.CTkButton(
+            self.details_buttons_frame,
+            text="☆ В избранное",
+            fg_color=FAVORITE,
+            hover_color=FAVORITE_HOVER,
+            command=self.toggle_selected_favorite,
+            state="disabled"
+        )
+        self.favorite_button.grid(row=0, column=2, sticky="ew")
 
         self.details_text = ctk.CTkTextbox(self.details_panel, wrap="word")
         self.details_text.pack(fill="both", expand=True, padx=12, pady=(0, 12))
@@ -218,13 +274,21 @@ class MainWindow(ctk.CTk):
             empty_label = ctk.CTkLabel(
                 self.idea_listbox,
                 text="Ничего не найдено. Попробуй изменить поиск или фильтры.",
-                text_color="#aeb7c5"
+                text_color=TEXT_SECONDARY
             )
             empty_label.pack(anchor="w", padx=8, pady=8)
             return
 
         for idea in ideas:
-            card = ctk.CTkFrame(self.idea_listbox, corner_radius=14, fg_color="#242936")
+            status_color = get_status_color(idea["status"])
+
+            card = ctk.CTkFrame(
+                self.idea_listbox,
+                corner_radius=14,
+                fg_color=CARD_BG,
+                border_width=1,
+                border_color=status_color
+            )
             card.pack(fill="x", padx=4, pady=6)
 
             title_text = f'★ {idea["title"]}' if idea["favorite"] else idea["title"]
@@ -239,7 +303,7 @@ class MainWindow(ctk.CTk):
             subtitle = ctk.CTkLabel(
                 card,
                 text=f'{idea["genre"]} • {idea["status"]} • {idea["readiness"]}',
-                text_color="#aeb7c5"
+                text_color=status_color
             )
             subtitle.pack(anchor="w", padx=12, pady=2)
 
@@ -274,10 +338,18 @@ class MainWindow(ctk.CTk):
 
     def _update_sidebar_button_styles(self):
         for category, button in self.sidebar_buttons.items():
-            if category == self.current_sidebar_filter:
-                button.configure(fg_color="#2f6db2", hover_color="#3c7ccc")
-            else:
-                button.configure(fg_color="#242936", hover_color="#2d3442")
+            fg_color, hover_color = get_sidebar_button_colors(category == self.current_sidebar_filter)
+            button.configure(fg_color=fg_color, hover_color=hover_color)
+
+    def _update_favorite_button_state(self):
+        if self.selected_idea is None:
+            self.favorite_button.configure(state="disabled", text="☆ В избранное")
+            return
+
+        if self.selected_idea["favorite"]:
+            self.favorite_button.configure(state="normal", text="★ Убрать из избранного")
+        else:
+            self.favorite_button.configure(state="normal", text="☆ В избранное")
 
     def apply_filters(self):
         query = self.search_entry.get().strip()
@@ -299,7 +371,7 @@ class MainWindow(ctk.CTk):
             readiness = None
 
         mechanic = self.mechanic_menu.get()
-        if mechanic == "Все механики":
+        if mechanic == "Все механики" or mechanic == "Не выбрано":
             mechanic = None
 
         filtered = self.idea_manager.filter_ideas(
@@ -331,6 +403,10 @@ class MainWindow(ctk.CTk):
         self.details_title.configure(text=idea["title"])
         self.edit_button.configure(state="normal")
         self.delete_button.configure(state="normal")
+        self._update_favorite_button_state()
+
+        status_color = get_status_color(idea["status"])
+        self.status_badge.configure(text=f'Статус: {idea["status"]}', fg_color=status_color)
 
         details = (
             f'Ключевая фишка: {idea["hook"]}\n\n'
@@ -341,7 +417,6 @@ class MainWindow(ctk.CTk):
             f'Перспектива: {idea["perspective"]}\n'
             f'Платформа: {idea["platform"]}\n'
             f'Проработка: {idea["readiness"]}\n'
-            f'Статус: {idea["status"]}\n'
             f'Теги: {", ".join(idea["tags"]) if idea["tags"] else "Нет"}\n'
             f'Избранное: {"Да" if idea["favorite"] else "Нет"}\n'
             f'Дата создания: {idea["created_at"]}\n'
@@ -359,6 +434,8 @@ class MainWindow(ctk.CTk):
         self.details_title.configure(text="Выбери идею")
         self.edit_button.configure(state="disabled")
         self.delete_button.configure(state="disabled")
+        self._update_favorite_button_state()
+        self.status_badge.configure(text="", fg_color=CARD_BORDER)
 
         self.details_text.configure(state="normal")
         self.details_text.delete("1.0", "end")
@@ -416,6 +493,29 @@ class MainWindow(ctk.CTk):
         save_ideas(self.data_file, self.idea_manager.get_all())
         self.apply_filters()
         self.clear_details()
+
+    def toggle_selected_favorite(self):
+        if self.selected_idea is None:
+            messagebox.showwarning("Предупреждение", "Сначала выбери идею.")
+            return
+
+        was_toggled = self.idea_manager.toggle_favorite(self.selected_idea["id"])
+        if not was_toggled:
+            messagebox.showerror("Ошибка", "Не удалось изменить избранное.")
+            return
+
+        save_ideas(self.data_file, self.idea_manager.get_all())
+
+        updated_idea = self.idea_manager.get_by_id(self.selected_idea["id"])
+        self.apply_filters()
+
+        if updated_idea is not None:
+            visible_ids = {idea["id"] for idea in self.filtered_ideas}
+
+            if updated_idea["id"] in visible_ids:
+                self.show_idea_details(updated_idea)
+            else:
+                self.clear_details()
 
     def show_random_idea(self):
         random_idea = self.idea_manager.get_random_idea(self.filtered_ideas)

@@ -10,6 +10,14 @@ from core.constants import (
     READINESS_OPTIONS,
     STATUS_OPTIONS,
 )
+from ui.styles import (
+    APP_BG,
+    PANEL_BG,
+    ACCENT,
+    ACCENT_HOVER,
+    BUTTON_NEUTRAL,
+    BUTTON_NEUTRAL_HOVER,
+)
 
 
 class IdeaDialog(ctk.CTkToplevel):
@@ -23,7 +31,7 @@ class IdeaDialog(ctk.CTkToplevel):
         self.title("Редактирование идеи" if self.is_edit_mode else "Новая идея")
         self.geometry("720x760")
         self.minsize(620, 600)
-        self.configure(fg_color="#16181d")
+        self.configure(fg_color=APP_BG)
 
         self.transient(master)
         self.grab_set()
@@ -34,7 +42,7 @@ class IdeaDialog(ctk.CTkToplevel):
         self.container = ctk.CTkScrollableFrame(
             self,
             corner_radius=16,
-            fg_color="#1d2128"
+            fg_color=PANEL_BG
         )
         self.container.grid(row=0, column=0, sticky="nsew", padx=16, pady=16)
 
@@ -90,6 +98,8 @@ class IdeaDialog(ctk.CTkToplevel):
         save_button = ctk.CTkButton(
             buttons_frame,
             text="Сохранить",
+            fg_color=ACCENT,
+            hover_color=ACCENT_HOVER,
             command=self._save
         )
         save_button.pack(side="left", padx=(0, 10))
@@ -97,8 +107,8 @@ class IdeaDialog(ctk.CTkToplevel):
         cancel_button = ctk.CTkButton(
             buttons_frame,
             text="Отмена",
-            fg_color="#3a3f4b",
-            hover_color="#4a5160",
+            fg_color=BUTTON_NEUTRAL,
+            hover_color=BUTTON_NEUTRAL_HOVER,
             command=self.destroy
         )
         cancel_button.pack(side="left")
@@ -142,7 +152,7 @@ class IdeaDialog(ctk.CTkToplevel):
         label = ctk.CTkLabel(self.container, text=label_text)
         label.pack(anchor="w", padx=12, pady=(8, 4))
 
-        menu = ctk.CTkOptionMenu(self.container, values=values)
+        menu = ctk.CTkOptionMenu(self.container, values=values, fg_color=ACCENT, button_color=ACCENT, button_hover_color=ACCENT_HOVER)
         menu.pack(fill="x", padx=12, pady=(0, 8))
         menu.set(default_value)
 
