@@ -1,13 +1,11 @@
-import os
-import sys
-import ctypes
-import tempfile
 from functools import partial
 from tkinter import filedialog, messagebox
 
 import tkinter as tk
 import customtkinter as ctk
-from PIL import Image, ImageTk
+from PIL import Image
+
+from ui.window_utils import get_asset_path, apply_window_icon
 
 from core.constants import STATUS_OPTIONS, READINESS_OPTIONS, MECHANICS
 from core.storage import save_ideas
@@ -51,10 +49,8 @@ class MainWindow(ctk.CTk):
         self.sidebar_buttons = {}
 
         self.logo_image = None
-        self.window_icon_photo = None
-        self.temp_icon_path = None
-
         self.context_widget = None
+
         self.text_context_menu = tk.Menu(self, tearoff=0)
         self.text_context_menu.add_command(label="Отменить", command=self._context_undo)
         self.text_context_menu.add_separator()
@@ -74,31 +70,15 @@ class MainWindow(ctk.CTk):
 
         self._load_brand_assets()
         self._build_layout()
-        self._apply_window_icon()
+        self.after(100, lambda: apply_window_icon(self, delay_ms=0))
         self._setup_global_shortcuts()
         self._setup_mousewheel_support()
         self._update_sidebar_button_styles()
         self._update_status_filter_style()
         self.apply_filters()
 
-    def _project_root(self) -> str:
-        return os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-
-    def _resolve_asset_path(self, filename: str) -> str | None:
-        root = self._project_root()
-        candidates = [
-            os.path.join(root, "assets", filename),
-            os.path.join(root, filename),
-        ]
-
-        for path in candidates:
-            if os.path.exists(path):
-                return path
-
-        return None
-
     def _load_brand_assets(self):
-        logo_path = self._resolve_asset_path("logo.png")
+        logo_path = get_asset_path("logo.png")
         if logo_path:
             try:
                 pil_logo = Image.open(logo_path)
@@ -110,44 +90,10 @@ class MainWindow(ctk.CTk):
                 self.logo_image = ctk.CTkImage(
                     light_image=pil_logo,
                     dark_image=pil_logo,
-                    size=(target_width, target_height)
+                    size=(target_width, target_height),
                 )
             except Exception:
                 self.logo_image = None
-
-    def _apply_window_icon(self):
-        icon_ico_path = self._resolve_asset_path("icon.ico")
-        icon_png_path = self._resolve_asset_path("icon.png")
-
-        try:
-            if sys.platform.startswith("win"):
-                ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID("IDailyx.App")
-        except Exception:
-            pass
-
-        try:
-            if sys.platform.startswith("win") and icon_ico_path:
-                self.iconbitmap(icon_ico_path)
-        except Exception:
-            pass
-
-        if icon_png_path:
-            try:
-                pil_icon = Image.open(icon_png_path)
-                self.window_icon_photo = ImageTk.PhotoImage(pil_icon)
-                self.iconphoto(False, self.window_icon_photo)
-            except Exception:
-                self.window_icon_photo = None
-
-        if sys.platform.startswith("win") and not icon_ico_path and icon_png_path:
-            try:
-                pil_icon = Image.open(icon_png_path)
-                temp_dir = tempfile.gettempdir()
-                self.temp_icon_path = os.path.join(temp_dir, "idailyx_icon.ico")
-                pil_icon.save(self.temp_icon_path, format="ICO")
-                self.iconbitmap(self.temp_icon_path)
-            except Exception:
-                pass
 
     def _build_layout(self):
         self.grid_columnconfigure(0, minsize=220, weight=0)
@@ -180,17 +126,13 @@ class MainWindow(ctk.CTk):
         self.top_bar.grid_columnconfigure(2, weight=0)
 
         if self.logo_image is not None:
-            logo_label = ctk.CTkLabel(
-                self.top_bar,
-                text="",
-                image=self.logo_image
-            )
+            logo_label = ctk.CTkLabel(self.top_bar, text="", image=self.logo_image)
         else:
             logo_label = ctk.CTkLabel(
                 self.top_bar,
                 text="IDailyx",
                 text_color=TEXT_PRIMARY,
-                font=ui_font(30, "bold")
+                font=ui_font(30, "bold"),
             )
 
         logo_label.grid(row=0, column=0, rowspan=2, padx=(16, 14), pady=14, sticky="n")
@@ -207,10 +149,15 @@ class MainWindow(ctk.CTk):
             placeholder_text_color=TEXT_MUTED,
             border_color=CARD_BORDER,
             height=36,
-            font=ui_font(14)
+            font=ui_font(14),
         )
         self.search_entry.grid(row=0, column=0, sticky="ew", pady=(0, 10))
         self.search_entry.bind("<KeyRelease>", self._on_search_change)
+
+        try:
+            self.search_entry._entry.configure(undo=True)
+        except Exception:
+            pass
 
         filters_left = ctk.CTkFrame(center_block, fg_color="transparent")
         filters_left.grid(row=1, column=0, sticky="w")
@@ -229,7 +176,7 @@ class MainWindow(ctk.CTk):
             dropdown_hover_color=CARD_BG,
             dropdown_text_color=TEXT_PRIMARY,
             font=self.button_font,
-            dropdown_font=self.button_font
+            dropdown_font=self.button_font,
         )
         self.status_menu.pack(side="left", padx=(0, 8))
         self.status_menu.set("Все статусы")
@@ -248,7 +195,7 @@ class MainWindow(ctk.CTk):
             dropdown_hover_color=CARD_BG,
             dropdown_text_color=TEXT_PRIMARY,
             font=self.button_font,
-            dropdown_font=self.button_font
+            dropdown_font=self.button_font,
         )
         self.readiness_menu.pack(side="left", padx=(0, 8))
         self.readiness_menu.set("Вся проработка")
@@ -267,7 +214,7 @@ class MainWindow(ctk.CTk):
             dropdown_hover_color=CARD_BG,
             dropdown_text_color=TEXT_PRIMARY,
             font=self.button_font,
-            dropdown_font=self.button_font
+            dropdown_font=self.button_font,
         )
         self.mechanic_menu.pack(side="left")
         self.mechanic_menu.set("Все механики")
@@ -287,7 +234,7 @@ class MainWindow(ctk.CTk):
             width=140,
             height=34,
             font=self.button_font,
-            command=self.open_add_dialog
+            command=self.open_add_dialog,
         )
         self.new_button.pack(side="left", padx=(0, 8))
 
@@ -300,7 +247,7 @@ class MainWindow(ctk.CTk):
             width=140,
             height=34,
             font=self.button_font,
-            command=self.show_random_idea
+            command=self.show_random_idea,
         )
         self.random_button.pack(side="left", padx=(0, 8))
 
@@ -313,7 +260,7 @@ class MainWindow(ctk.CTk):
             width=140,
             height=34,
             font=self.button_font,
-            command=self.export_filtered_ideas
+            command=self.export_filtered_ideas,
         )
         self.export_button.pack(side="left")
 
@@ -329,7 +276,7 @@ class MainWindow(ctk.CTk):
             width=150,
             height=34,
             font=self.button_font,
-            command=self.reset_filters
+            command=self.reset_filters,
         )
         self.reset_filters_button.pack(side="left", padx=(0, 8))
 
@@ -353,7 +300,7 @@ class MainWindow(ctk.CTk):
             dropdown_hover_color=CARD_BG,
             dropdown_text_color=TEXT_PRIMARY,
             font=self.button_font,
-            dropdown_font=self.button_font
+            dropdown_font=self.button_font,
         )
         self.sort_menu.pack(side="left")
         self.sort_menu.set("Сначала новые")
@@ -365,7 +312,7 @@ class MainWindow(ctk.CTk):
             text_color=TEXT_PRIMARY,
             font=self.section_title_font,
             anchor="w",
-            justify="left"
+            justify="left",
         )
         title.pack(fill="x", padx=20, pady=(16, 6))
 
@@ -390,8 +337,7 @@ class MainWindow(ctk.CTk):
             "Мультиплеер",
         ]
 
-        top_spacer = ctk.CTkFrame(self.sidebar, height=4, fg_color="transparent")
-        top_spacer.pack(fill="x", padx=12, pady=(0, 2))
+        ctk.CTkFrame(self.sidebar, height=4, fg_color="transparent").pack(fill="x", padx=12, pady=(0, 2))
 
         for category in top_categories:
             button = ctk.CTkButton(
@@ -401,13 +347,12 @@ class MainWindow(ctk.CTk):
                 text_color=TEXT_PRIMARY,
                 text_color_disabled=TEXT_MUTED,
                 font=self.button_font,
-                command=partial(self.set_sidebar_filter, category)
+                command=partial(self.set_sidebar_filter, category),
             )
             button.pack(fill="x", padx=12, pady=4)
             self.sidebar_buttons[category] = button
 
-        spacer = ctk.CTkFrame(self.sidebar, height=14, fg_color="transparent")
-        spacer.pack(fill="x", padx=12, pady=(4, 6))
+        ctk.CTkFrame(self.sidebar, height=14, fg_color="transparent").pack(fill="x", padx=12, pady=(4, 6))
 
         for category in other_categories:
             button = ctk.CTkButton(
@@ -417,7 +362,7 @@ class MainWindow(ctk.CTk):
                 text_color=TEXT_PRIMARY,
                 text_color_disabled=TEXT_MUTED,
                 font=self.button_font,
-                command=partial(self.set_sidebar_filter, category)
+                command=partial(self.set_sidebar_filter, category),
             )
             button.pack(fill="x", padx=12, pady=4)
             self.sidebar_buttons[category] = button
@@ -429,15 +374,14 @@ class MainWindow(ctk.CTk):
             text_color=TEXT_PRIMARY,
             font=self.section_title_font,
             anchor="w",
-            justify="left"
+            justify="left",
         )
         title.pack(fill="x", padx=28, pady=(16, 6))
 
         divider = ctk.CTkFrame(self.center_panel, height=1, fg_color=LINE_COLOR)
         divider.pack(fill="x", padx=28, pady=(0, 12))
 
-        top_spacer = ctk.CTkFrame(self.center_panel, height=4, fg_color="transparent")
-        top_spacer.pack(fill="x", padx=12, pady=(0, 2))
+        ctk.CTkFrame(self.center_panel, height=4, fg_color="transparent").pack(fill="x", padx=12, pady=(0, 2))
 
         self.idea_listbox = ctk.CTkScrollableFrame(self.center_panel, fg_color="transparent")
         self.idea_listbox.pack(fill="both", expand=True, padx=12, pady=(0, 12))
@@ -455,7 +399,7 @@ class MainWindow(ctk.CTk):
             text_color=TEXT_PRIMARY,
             font=self.section_title_font,
             anchor="w",
-            justify="left"
+            justify="left",
         )
         self.details_title.grid(row=0, column=0, sticky="w")
 
@@ -472,7 +416,7 @@ class MainWindow(ctk.CTk):
             text_color=ACCENT,
             font=ui_font(18, "bold"),
             command=self.toggle_selected_favorite,
-            state="disabled"
+            state="disabled",
         )
         self.favorite_button.grid(row=0, column=1, sticky="e")
 
@@ -494,7 +438,7 @@ class MainWindow(ctk.CTk):
             text_color_disabled="#6F6258",
             font=self.button_font,
             command=self.open_edit_dialog,
-            state="disabled"
+            state="disabled",
         )
         self.edit_button.grid(row=0, column=0, sticky="ew", padx=(0, 8))
 
@@ -507,14 +451,14 @@ class MainWindow(ctk.CTk):
             text_color_disabled="#6F6258",
             font=self.button_font,
             command=self.delete_selected_idea,
-            state="disabled"
+            state="disabled",
         )
         self.delete_button.grid(row=0, column=1, sticky="ew")
 
         self.details_content = ctk.CTkScrollableFrame(
             self.details_panel,
             fg_color=INPUT_BG,
-            corner_radius=12
+            corner_radius=12,
         )
         self.details_content.pack(fill="both", expand=True, padx=12, pady=(0, 12))
 
@@ -550,21 +494,21 @@ class MainWindow(ctk.CTk):
         if widget is None:
             return
 
-        keycode = event.keycode
+        key = event.keysym.lower()
 
-        if keycode == 65:  # Ctrl+A
+        if key == "a":
             self._select_all_widget(widget)
             return "break"
-        if keycode == 67:  # Ctrl+C
+        if key == "c":
             self._copy_widget_selection(widget)
             return "break"
-        if keycode == 88:  # Ctrl+X
+        if key == "x":
             self._cut_widget_selection(widget)
             return "break"
-        if keycode == 86:  # Ctrl+V
+        if key == "v":
             self._paste_into_widget(widget)
             return "break"
-        if keycode == 90:  # Ctrl+Z
+        if key == "z":
             self._undo_widget(widget)
             return "break"
 
@@ -726,7 +670,7 @@ class MainWindow(ctk.CTk):
                 text_color=TEXT_MUTED,
                 justify="left",
                 anchor="w",
-                font=ui_font(14)
+                font=ui_font(14),
             )
             empty_label.pack(fill="x", padx=8, pady=8)
             return
@@ -742,7 +686,7 @@ class MainWindow(ctk.CTk):
                 corner_radius=18,
                 fg_color=CARD_BG,
                 border_width=1,
-                border_color=status_color
+                border_color=status_color,
             )
             card.pack(fill="x", padx=4, pady=6)
 
@@ -754,7 +698,7 @@ class MainWindow(ctk.CTk):
                 text_color=status_color,
                 font=ui_font(18, "bold"),
                 justify="left",
-                anchor="w"
+                anchor="w",
             )
             title.pack(fill="x", padx=12, pady=(10, 2))
 
@@ -764,7 +708,7 @@ class MainWindow(ctk.CTk):
                 text_color=TEXT_SECONDARY,
                 font=ui_font(12, "bold"),
                 justify="left",
-                anchor="w"
+                anchor="w",
             )
             subtitle.pack(fill="x", padx=12, pady=(0, 2))
 
@@ -777,7 +721,7 @@ class MainWindow(ctk.CTk):
                 wraplength=preview_wrap,
                 justify="left",
                 anchor="w",
-                font=ui_font(13)
+                font=ui_font(13),
             )
             preview.pack(fill="x", padx=12, pady=(2, 10))
 
@@ -806,7 +750,7 @@ class MainWindow(ctk.CTk):
                 fg_color=BUTTON_NEUTRAL,
                 button_color=BUTTON_NEUTRAL,
                 button_hover_color=BUTTON_NEUTRAL_HOVER,
-                text_color=APP_BG
+                text_color=APP_BG,
             )
         else:
             status_color = get_status_color(current_status)
@@ -814,7 +758,7 @@ class MainWindow(ctk.CTk):
                 fg_color=status_color,
                 button_color=status_color,
                 button_hover_color=status_color,
-                text_color=APP_BG
+                text_color=APP_BG,
             )
 
     def set_sidebar_filter(self, category: str):
@@ -842,7 +786,7 @@ class MainWindow(ctk.CTk):
                 text="☆",
                 fg_color=INPUT_BG,
                 border_color=ACCENT,
-                text_color=ACCENT
+                text_color=ACCENT,
             )
             return
 
@@ -853,7 +797,7 @@ class MainWindow(ctk.CTk):
                 fg_color=ACCENT,
                 hover_color=ACCENT_HOVER,
                 border_color=ACCENT,
-                text_color=APP_BG
+                text_color=APP_BG,
             )
         else:
             self.favorite_button.configure(
@@ -862,7 +806,7 @@ class MainWindow(ctk.CTk):
                 fg_color=INPUT_BG,
                 hover_color=CARD_BG,
                 border_color=ACCENT,
-                text_color=ACCENT
+                text_color=ACCENT,
             )
 
     def _clear_details_content(self):
@@ -873,12 +817,12 @@ class MainWindow(ctk.CTk):
         self._clear_details_content()
         placeholder = ctk.CTkLabel(
             self.details_content,
-            text="Здесь будут показаны подробности выбранной идеи.",
+            text="Здесь будут показаны подробности идеи.",
             text_color=TEXT_PRIMARY,
             justify="left",
             anchor="w",
-            wraplength=300,
-            font=ui_font(14)
+            wraplength=320,
+            font=ui_font(14),
         )
         placeholder.pack(fill="x", padx=10, pady=8)
 
@@ -889,7 +833,7 @@ class MainWindow(ctk.CTk):
             text_color=TEXT_PRIMARY,
             font=self.section_title_font,
             justify="left",
-            anchor="w"
+            anchor="w",
         )
         label.pack(fill="x", padx=8, pady=(8, 3))
 
@@ -910,7 +854,7 @@ class MainWindow(ctk.CTk):
             text_color=TEXT_SECONDARY,
             anchor="w",
             justify="left",
-            font=ui_font(13, "bold")
+            font=ui_font(13, "bold"),
         )
         left_label.grid(row=0, column=0, sticky="w", pady=0)
 
@@ -921,7 +865,7 @@ class MainWindow(ctk.CTk):
             anchor="w",
             justify="left",
             wraplength=170,
-            font=ui_font(13)
+            font=ui_font(13),
         )
         right_label.grid(row=0, column=1, sticky="w", padx=(6, 0), pady=0)
 
@@ -990,7 +934,7 @@ class MainWindow(ctk.CTk):
         self.details_title.configure(
             text=idea["title"],
             text_color=status_color,
-            font=self.section_title_font
+            font=self.section_title_font,
         )
 
         self._show_favorite_button()
@@ -1000,6 +944,8 @@ class MainWindow(ctk.CTk):
         self.delete_button.configure(state="normal")
 
         self._clear_details_content()
+        self.update_idletasks()
+        text_wrap = max(280, self.details_content.winfo_width() - 40)
 
         self._add_section_title(self.details_content, "Описание")
         description = ctk.CTkLabel(
@@ -1008,8 +954,8 @@ class MainWindow(ctk.CTk):
             text_color=TEXT_PRIMARY,
             justify="left",
             anchor="w",
-            wraplength=320,
-            font=ui_font(14)
+            wraplength=text_wrap,
+            font=ui_font(14),
         )
         description.pack(fill="x", padx=8, pady=(0, 4))
 
@@ -1026,12 +972,12 @@ class MainWindow(ctk.CTk):
         self._add_two_column_row(
             self.details_content,
             "Теги",
-            ", ".join(idea["tags"]) if idea["tags"] else "Нет"
+            ", ".join(idea["tags"]) if idea["tags"] else "Нет",
         )
         self._add_two_column_row(
             self.details_content,
             "Избранное",
-            "Да" if idea["favorite"] else "Нет"
+            "Да" if idea["favorite"] else "Нет",
         )
 
         self._add_divider(self.details_content)
@@ -1049,8 +995,8 @@ class MainWindow(ctk.CTk):
             text_color=TEXT_PRIMARY,
             justify="left",
             anchor="w",
-            wraplength=320,
-            font=ui_font(14)
+            wraplength=text_wrap,
+            font=ui_font(14),
         )
         notes.pack(fill="x", padx=8, pady=(0, 4))
 
@@ -1059,7 +1005,7 @@ class MainWindow(ctk.CTk):
         self.details_title.configure(
             text="Карточка идеи",
             text_color=TEXT_PRIMARY,
-            font=self.section_title_font
+            font=self.section_title_font,
         )
         self.edit_button.configure(state="disabled")
         self.delete_button.configure(state="disabled")
@@ -1104,7 +1050,7 @@ class MainWindow(ctk.CTk):
 
         confirm = messagebox.askyesno(
             "Удаление идеи",
-            f'Удалить идею "{self.selected_idea["title"]}"?'
+            f'Удалить идею "{self.selected_idea["title"]}"?',
         )
 
         if not confirm:
@@ -1160,7 +1106,7 @@ class MainWindow(ctk.CTk):
             title="Сохранить экспорт идей",
             defaultextension=".txt",
             filetypes=[("Text files", "*.txt")],
-            initialfile="idailyx_export.txt"
+            initialfile="idailyx_export.txt",
         )
 
         if not file_path:

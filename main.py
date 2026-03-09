@@ -41,6 +41,7 @@ def configure_tk_environment():
 configure_tk_environment()
 
 from ui.main_window import MainWindow
+from ui.window_utils import set_app_user_model_id
 
 
 def bootstrap_data():
@@ -49,6 +50,8 @@ def bootstrap_data():
 
 
 if __name__ == "__main__":
+    set_app_user_model_id("Treenixie.IDailyx")
+
     ideas = bootstrap_data()
     manager = IdeaManager(ideas)
 

@@ -7,39 +7,47 @@ def ui_font(size: int = 14, weight: str = "normal") -> ctk.CTkFont:
     return ctk.CTkFont(family=FONT_FAMILY, size=size, weight=weight)
 
 
-APP_BG = "#1F1A17"
-PANEL_BG = "#2B2420"
-CARD_BG = "#342D28"
-INPUT_BG = "#3A332D"
-CARD_BORDER = "#5C4F45"
-LINE_COLOR = "#53463D"
+# База интерфейса: перевод из тёплого коричневого в тёмный серо-синий
+APP_BG = "#1C2128"
+PANEL_BG = "#242B34"
+CARD_BG = "#2B333D"
+INPUT_BG = "#313A45"
+CARD_BORDER = "#4A5866"
+LINE_COLOR = "#42505D"
 
-TEXT_PRIMARY = "#F3E8D8"
-TEXT_SECONDARY = "#D9C6AE"
-TEXT_MUTED = "#A7937D"
+# Текст: мягкий тёплый светлый, как на референсе
+TEXT_PRIMARY = "#F3DFC2"
+TEXT_SECONDARY = "#D7C1A2"
+TEXT_MUTED = "#A9967D"
 
-ACCENT = "#D39A63"
-ACCENT_HOVER = "#E0AC7B"
+# Основные акцентные кнопки: оранжевый
+ACCENT = "#D88E57"
+ACCENT_HOVER = "#E39D6A"
 
-BUTTON_NEUTRAL = "#91A4A0"
-BUTTON_NEUTRAL_HOVER = "#A2B4B0"
+# Нейтральные фильтры и селекты: светло-голубой
+BUTTON_NEUTRAL = "#A9CDD6"
+BUTTON_NEUTRAL_HOVER = "#B8D9E1"
 
-DANGER = "#C28770"
-DANGER_HOVER = "#D39881"
+# Опасные действия: красный
+DANGER = "#D46A57"
+DANGER_HOVER = "#DF7A68"
 
-FAVORITE = "#D39A63"
-FAVORITE_HOVER = "#E0AC7B"
+# Избранное можно оставить в оранжевой гамме
+FAVORITE = "#D88E57"
+FAVORITE_HOVER = "#E39D6A"
 
-SIDEBAR_BUTTON = "#342D28"
-SIDEBAR_BUTTON_HOVER = "#3E3630"
-SIDEBAR_ACTIVE = "#4A4038"
-SIDEBAR_ACTIVE_HOVER = "#584B41"
+# Кнопки в боковой панели
+SIDEBAR_BUTTON = "#313844"
+SIDEBAR_BUTTON_HOVER = "#39424E"
+SIDEBAR_ACTIVE = "#4B5866"
+SIDEBAR_ACTIVE_HOVER = "#596878"
 
+# Цвета статусов
 STATUS_COLORS = {
-    "новая": "#F3E8D8",
-    "в работе": "#D39A63",
-    "заморожена": "#9FB5C1",
-    "завершена": "#97B27A",
+    "новая": "#F3DFC2",
+    "в работе": "#D88E57",
+    "заморожена": "#8FC6D4",
+    "завершена": "#8FAE73",
 }
 
 

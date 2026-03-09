@@ -1,12 +1,9 @@
-import os
-import sys
-import ctypes
-import tempfile
 from tkinter import messagebox
 
 import tkinter as tk
 import customtkinter as ctk
-from PIL import Image, ImageTk
+
+from ui.window_utils import apply_window_icon
 
 from core.constants import (
     GENRES,
@@ -41,9 +38,6 @@ class IdeaDialog(ctk.CTkToplevel):
         self.on_save = on_save
         self.idea = idea
         self.is_edit_mode = idea is not None
-
-        self.window_icon_photo = None
-        self.temp_icon_path = None
         self.context_widget = None
 
         self.text_context_menu = tk.Menu(self, tearoff=0)
@@ -62,8 +56,8 @@ class IdeaDialog(ctk.CTkToplevel):
 
         self.transient(master)
         self.grab_set()
+        self.after(100, lambda: apply_window_icon(self, delay_ms=0))
 
-        self._apply_dialog_icon()
         self._setup_global_shortcuts()
 
         self.grid_columnconfigure(0, weight=1)
@@ -72,7 +66,7 @@ class IdeaDialog(ctk.CTkToplevel):
         self.container = ctk.CTkScrollableFrame(
             self,
             corner_radius=18,
-            fg_color=PANEL_BG
+            fg_color=PANEL_BG,
         )
         self.container.grid(row=0, column=0, sticky="nsew", padx=16, pady=16)
 
@@ -82,55 +76,6 @@ class IdeaDialog(ctk.CTkToplevel):
             self._fill_form()
 
         self.after(100, lambda: self.title_entry.focus())
-
-    def _project_root(self) -> str:
-        return os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-
-    def _resolve_asset_path(self, filename: str) -> str | None:
-        root = self._project_root()
-        candidates = [
-            os.path.join(root, "assets", filename),
-            os.path.join(root, filename),
-        ]
-
-        for path in candidates:
-            if os.path.exists(path):
-                return path
-        return None
-
-    def _apply_dialog_icon(self):
-        icon_ico_path = self._resolve_asset_path("icon.ico")
-        icon_png_path = self._resolve_asset_path("icon.png")
-
-        try:
-            if sys.platform.startswith("win"):
-                ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID("IDailyx.App")
-        except Exception:
-            pass
-
-        try:
-            if sys.platform.startswith("win") and icon_ico_path:
-                self.iconbitmap(icon_ico_path)
-        except Exception:
-            pass
-
-        if icon_png_path:
-            try:
-                pil_icon = Image.open(icon_png_path)
-                self.window_icon_photo = ImageTk.PhotoImage(pil_icon)
-                self.iconphoto(False, self.window_icon_photo)
-            except Exception:
-                self.window_icon_photo = None
-
-        if sys.platform.startswith("win") and not icon_ico_path and icon_png_path:
-            try:
-                pil_icon = Image.open(icon_png_path)
-                temp_dir = tempfile.gettempdir()
-                self.temp_icon_path = os.path.join(temp_dir, "idailyx_dialog_icon.ico")
-                pil_icon.save(self.temp_icon_path, format="ICO")
-                self.iconbitmap(self.temp_icon_path)
-            except Exception:
-                pass
 
     def _setup_global_shortcuts(self):
         self.bind_all("<Control-KeyPress>", self._handle_global_ctrl_shortcuts, add="+")
@@ -156,21 +101,21 @@ class IdeaDialog(ctk.CTkToplevel):
         if widget is None:
             return
 
-        keycode = event.keycode
+        key = event.keysym.lower()
 
-        if keycode == 65:  # Ctrl+A
+        if key == "a":
             self._select_all_widget(widget)
             return "break"
-        if keycode == 67:  # Ctrl+C
+        if key == "c":
             self._copy_widget_selection(widget)
             return "break"
-        if keycode == 88:  # Ctrl+X
+        if key == "x":
             self._cut_widget_selection(widget)
             return "break"
-        if keycode == 86:  # Ctrl+V
+        if key == "v":
             self._paste_into_widget(widget)
             return "break"
-        if keycode == 90:  # Ctrl+Z
+        if key == "z":
             self._undo_widget(widget)
             return "break"
 
@@ -282,7 +227,7 @@ class IdeaDialog(ctk.CTkToplevel):
             self.container,
             text="Редактирование идеи" if self.is_edit_mode else "Новая идея",
             text_color=TEXT_PRIMARY,
-            font=ui_font(22, "bold")
+            font=ui_font(22, "bold"),
         )
         title_label.pack(anchor="w", padx=12, pady=(12, 6))
 
@@ -309,7 +254,7 @@ class IdeaDialog(ctk.CTkToplevel):
             text="Добавить в избранное",
             variable=self.favorite_var,
             text_color=TEXT_PRIMARY,
-            font=ui_font(13)
+            font=ui_font(13),
         )
         self.favorite_checkbox.pack(anchor="w", padx=12, pady=(8, 16))
 
@@ -323,7 +268,7 @@ class IdeaDialog(ctk.CTkToplevel):
             hover_color=ACCENT_HOVER,
             text_color=APP_BG,
             font=ui_font(13),
-            command=self._save
+            command=self._save,
         )
         save_button.pack(side="left", padx=(0, 10))
 
@@ -334,7 +279,7 @@ class IdeaDialog(ctk.CTkToplevel):
             hover_color=BUTTON_NEUTRAL_HOVER,
             text_color=APP_BG,
             font=ui_font(13),
-            command=self.destroy
+            command=self.destroy,
         )
         cancel_button.pack(side="left")
 
@@ -359,7 +304,7 @@ class IdeaDialog(ctk.CTkToplevel):
             self.container,
             text=label_text,
             text_color=TEXT_SECONDARY,
-            font=ui_font(13, "bold")
+            font=ui_font(13, "bold"),
         )
         label.pack(anchor="w", padx=12, pady=(8, 4))
 
@@ -369,9 +314,15 @@ class IdeaDialog(ctk.CTkToplevel):
             text_color=TEXT_PRIMARY,
             placeholder_text_color=TEXT_MUTED,
             border_color=CARD_BORDER,
-            font=ui_font(14)
+            font=ui_font(14),
         )
         entry.pack(fill="x", padx=12, pady=(0, 8))
+
+        try:
+            entry._entry.configure(undo=True)
+        except Exception:
+            pass
+
         return entry
 
     def _create_textbox(self, label_text: str, height: int = 100):
@@ -379,7 +330,7 @@ class IdeaDialog(ctk.CTkToplevel):
             self.container,
             text=label_text,
             text_color=TEXT_SECONDARY,
-            font=ui_font(13, "bold")
+            font=ui_font(13, "bold"),
         )
         label.pack(anchor="w", padx=12, pady=(8, 4))
 
@@ -391,7 +342,7 @@ class IdeaDialog(ctk.CTkToplevel):
             border_width=1,
             border_color=CARD_BORDER,
             font=ui_font(14),
-            undo=True
+            undo=True,
         )
         textbox.pack(fill="x", padx=12, pady=(0, 8))
 
@@ -407,7 +358,7 @@ class IdeaDialog(ctk.CTkToplevel):
             self.container,
             text=label_text,
             text_color=TEXT_SECONDARY,
-            font=ui_font(13, "bold")
+            font=ui_font(13, "bold"),
         )
         label.pack(anchor="w", padx=12, pady=(8, 4))
 
@@ -419,7 +370,7 @@ class IdeaDialog(ctk.CTkToplevel):
             button_hover_color=BUTTON_NEUTRAL_HOVER,
             text_color=APP_BG,
             font=ui_font(13),
-            dropdown_font=ui_font(13)
+            dropdown_font=ui_font(13),
         )
         menu.pack(fill="x", padx=12, pady=(0, 8))
         menu.set(default_value)
