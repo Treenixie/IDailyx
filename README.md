@@ -19,20 +19,20 @@ python main.py
 
 ```text
 IDailyx/
-├── main.py
-├── requirements.txt
-├── README.md
+├── .gitattributes
 ├── .gitignore
-├── data/
-│   ├── ideas_demo.json
-│   └── ideas.json
+├── main.py
+├── README.md
+├── requirements.txt
 ├── core/
 │   ├── constants.py
-│   ├── storage.py
-│   └── idea_manager.py
+│   ├── idea_manager.py
+│   └── storage.py
+├── data/
+│   ├── ideas.json
 └── ui/
-    ├── main_window.py
     ├── dialogs.py
+    ├── main_window.py
     └── styles.py
 ```
 
