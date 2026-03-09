@@ -56,6 +56,8 @@ class MainWindow(ctk.CTk):
 
         self.context_widget = None
         self.text_context_menu = tk.Menu(self, tearoff=0)
+        self.text_context_menu.add_command(label="Отменить", command=self._context_undo)
+        self.text_context_menu.add_separator()
         self.text_context_menu.add_command(label="Вырезать", command=self._context_cut)
         self.text_context_menu.add_command(label="Копировать", command=self._context_copy)
         self.text_context_menu.add_command(label="Вставить", command=self._context_paste)
@@ -361,9 +363,11 @@ class MainWindow(ctk.CTk):
             self.sidebar,
             text="Жанры",
             text_color=TEXT_PRIMARY,
-            font=self.section_title_font
+            font=self.section_title_font,
+            anchor="w",
+            justify="left"
         )
-        title.pack(anchor="w", padx=20, pady=(16, 6))
+        title.pack(fill="x", padx=20, pady=(16, 6))
 
         divider = ctk.CTkFrame(self.sidebar, height=1, fg_color=LINE_COLOR)
         divider.pack(fill="x", padx=20, pady=(0, 12))
@@ -423,9 +427,11 @@ class MainWindow(ctk.CTk):
             self.center_panel,
             text="Архив идей",
             text_color=TEXT_PRIMARY,
-            font=self.section_title_font
+            font=self.section_title_font,
+            anchor="w",
+            justify="left"
         )
-        title.pack(anchor="w", padx=28, pady=(16, 6))
+        title.pack(fill="x", padx=28, pady=(16, 6))
 
         divider = ctk.CTkFrame(self.center_panel, height=1, fg_color=LINE_COLOR)
         divider.pack(fill="x", padx=28, pady=(0, 12))
@@ -447,7 +453,9 @@ class MainWindow(ctk.CTk):
             self.details_header,
             text="Карточка идеи",
             text_color=TEXT_PRIMARY,
-            font=self.section_title_font
+            font=self.section_title_font,
+            anchor="w",
+            justify="left"
         )
         self.details_title.grid(row=0, column=0, sticky="w")
 
@@ -556,6 +564,9 @@ class MainWindow(ctk.CTk):
         if keycode == 86:  # Ctrl+V
             self._paste_into_widget(widget)
             return "break"
+        if keycode == 90:  # Ctrl+Z
+            self._undo_widget(widget)
+            return "break"
 
     def _select_all_widget(self, widget):
         try:
@@ -620,6 +631,15 @@ class MainWindow(ctk.CTk):
         except Exception:
             pass
 
+    def _undo_widget(self, widget):
+        try:
+            if isinstance(widget, tk.Text):
+                widget.edit_undo()
+            elif isinstance(widget, tk.Entry):
+                widget.event_generate("<<Undo>>")
+        except Exception:
+            pass
+
     def _show_text_context_menu(self, event):
         widget = event.widget
         if not self._is_text_input_widget(widget):
@@ -630,6 +650,10 @@ class MainWindow(ctk.CTk):
             self.text_context_menu.tk_popup(event.x_root, event.y_root)
         finally:
             self.text_context_menu.grab_release()
+
+    def _context_undo(self):
+        if self.context_widget is not None:
+            self._undo_widget(self.context_widget)
 
     def _context_copy(self):
         if self.context_widget is not None:
@@ -701,13 +725,14 @@ class MainWindow(ctk.CTk):
                 text="Ничего не найдено.\nИзмени поиск или сбрось фильтры.",
                 text_color=TEXT_MUTED,
                 justify="left",
+                anchor="w",
                 font=ui_font(14)
             )
-            empty_label.pack(anchor="w", padx=8, pady=8)
+            empty_label.pack(fill="x", padx=8, pady=8)
             return
 
         self.update_idletasks()
-        preview_wrap = max(420, self.idea_listbox.winfo_width() - 50)
+        preview_wrap = max(520, self.idea_listbox.winfo_width() - 40)
 
         for idea in ideas:
             status_color = get_status_color(idea["status"])
@@ -862,9 +887,11 @@ class MainWindow(ctk.CTk):
             parent,
             text=text,
             text_color=TEXT_PRIMARY,
-            font=self.section_title_font
+            font=self.section_title_font,
+            justify="left",
+            anchor="w"
         )
-        label.pack(anchor="w", padx=8, pady=(8, 3))
+        label.pack(fill="x", padx=8, pady=(8, 3))
 
     def _add_divider(self, parent):
         divider = ctk.CTkFrame(parent, height=1, fg_color=LINE_COLOR)
@@ -882,6 +909,7 @@ class MainWindow(ctk.CTk):
             text=left_text,
             text_color=TEXT_SECONDARY,
             anchor="w",
+            justify="left",
             font=ui_font(13, "bold")
         )
         left_label.grid(row=0, column=0, sticky="w", pady=0)
@@ -892,7 +920,7 @@ class MainWindow(ctk.CTk):
             text_color=TEXT_PRIMARY,
             anchor="w",
             justify="left",
-            wraplength=145,
+            wraplength=170,
             font=ui_font(13)
         )
         right_label.grid(row=0, column=1, sticky="w", padx=(6, 0), pady=0)
@@ -979,7 +1007,8 @@ class MainWindow(ctk.CTk):
             text=idea.get("short_description", "").strip() or "—",
             text_color=TEXT_PRIMARY,
             justify="left",
-            wraplength=285,
+            anchor="w",
+            wraplength=320,
             font=ui_font(14)
         )
         description.pack(fill="x", padx=8, pady=(0, 4))
@@ -1019,7 +1048,8 @@ class MainWindow(ctk.CTk):
             text=idea["notes"] or "—",
             text_color=TEXT_PRIMARY,
             justify="left",
-            wraplength=285,
+            anchor="w",
+            wraplength=320,
             font=ui_font(14)
         )
         notes.pack(fill="x", padx=8, pady=(0, 4))

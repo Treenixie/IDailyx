@@ -1,5 +1,12 @@
-import customtkinter as ctk
+import os
+import sys
+import ctypes
+import tempfile
 from tkinter import messagebox
+
+import tkinter as tk
+import customtkinter as ctk
+from PIL import Image, ImageTk
 
 from core.constants import (
     GENRES,
@@ -35,6 +42,19 @@ class IdeaDialog(ctk.CTkToplevel):
         self.idea = idea
         self.is_edit_mode = idea is not None
 
+        self.window_icon_photo = None
+        self.temp_icon_path = None
+        self.context_widget = None
+
+        self.text_context_menu = tk.Menu(self, tearoff=0)
+        self.text_context_menu.add_command(label="Отменить", command=self._context_undo)
+        self.text_context_menu.add_separator()
+        self.text_context_menu.add_command(label="Вырезать", command=self._context_cut)
+        self.text_context_menu.add_command(label="Копировать", command=self._context_copy)
+        self.text_context_menu.add_command(label="Вставить", command=self._context_paste)
+        self.text_context_menu.add_separator()
+        self.text_context_menu.add_command(label="Выделить всё", command=self._context_select_all)
+
         self.title("Редактирование идеи" if self.is_edit_mode else "Новая идея")
         self.geometry("720x760")
         self.minsize(620, 600)
@@ -42,6 +62,9 @@ class IdeaDialog(ctk.CTkToplevel):
 
         self.transient(master)
         self.grab_set()
+
+        self._apply_dialog_icon()
+        self._setup_global_shortcuts()
 
         self.grid_columnconfigure(0, weight=1)
         self.grid_rowconfigure(0, weight=1)
@@ -60,6 +83,200 @@ class IdeaDialog(ctk.CTkToplevel):
 
         self.after(100, lambda: self.title_entry.focus())
 
+    def _project_root(self) -> str:
+        return os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+
+    def _resolve_asset_path(self, filename: str) -> str | None:
+        root = self._project_root()
+        candidates = [
+            os.path.join(root, "assets", filename),
+            os.path.join(root, filename),
+        ]
+
+        for path in candidates:
+            if os.path.exists(path):
+                return path
+        return None
+
+    def _apply_dialog_icon(self):
+        icon_ico_path = self._resolve_asset_path("icon.ico")
+        icon_png_path = self._resolve_asset_path("icon.png")
+
+        try:
+            if sys.platform.startswith("win"):
+                ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID("IDailyx.App")
+        except Exception:
+            pass
+
+        try:
+            if sys.platform.startswith("win") and icon_ico_path:
+                self.iconbitmap(icon_ico_path)
+        except Exception:
+            pass
+
+        if icon_png_path:
+            try:
+                pil_icon = Image.open(icon_png_path)
+                self.window_icon_photo = ImageTk.PhotoImage(pil_icon)
+                self.iconphoto(False, self.window_icon_photo)
+            except Exception:
+                self.window_icon_photo = None
+
+        if sys.platform.startswith("win") and not icon_ico_path and icon_png_path:
+            try:
+                pil_icon = Image.open(icon_png_path)
+                temp_dir = tempfile.gettempdir()
+                self.temp_icon_path = os.path.join(temp_dir, "idailyx_dialog_icon.ico")
+                pil_icon.save(self.temp_icon_path, format="ICO")
+                self.iconbitmap(self.temp_icon_path)
+            except Exception:
+                pass
+
+    def _setup_global_shortcuts(self):
+        self.bind_all("<Control-KeyPress>", self._handle_global_ctrl_shortcuts, add="+")
+        self.bind_all("<Button-3>", self._show_text_context_menu, add="+")
+
+    def _is_text_input_widget(self, widget) -> bool:
+        if widget is None:
+            return False
+        return isinstance(widget, (tk.Entry, tk.Text)) or widget.winfo_class() in {"Entry", "Text"}
+
+    def _get_focused_text_widget(self, event=None):
+        widget = self.focus_get()
+        if self._is_text_input_widget(widget):
+            return widget
+
+        if event is not None and self._is_text_input_widget(event.widget):
+            return event.widget
+
+        return None
+
+    def _handle_global_ctrl_shortcuts(self, event):
+        widget = self._get_focused_text_widget(event)
+        if widget is None:
+            return
+
+        keycode = event.keycode
+
+        if keycode == 65:  # Ctrl+A
+            self._select_all_widget(widget)
+            return "break"
+        if keycode == 67:  # Ctrl+C
+            self._copy_widget_selection(widget)
+            return "break"
+        if keycode == 88:  # Ctrl+X
+            self._cut_widget_selection(widget)
+            return "break"
+        if keycode == 86:  # Ctrl+V
+            self._paste_into_widget(widget)
+            return "break"
+        if keycode == 90:  # Ctrl+Z
+            self._undo_widget(widget)
+            return "break"
+
+    def _select_all_widget(self, widget):
+        try:
+            if isinstance(widget, tk.Text):
+                widget.tag_add("sel", "1.0", "end-1c")
+                widget.mark_set("insert", "1.0")
+                widget.see("insert")
+            elif isinstance(widget, tk.Entry):
+                widget.select_range(0, "end")
+                widget.icursor("end")
+        except Exception:
+            pass
+
+    def _copy_widget_selection(self, widget):
+        try:
+            text = ""
+            if isinstance(widget, tk.Text):
+                if widget.tag_ranges("sel"):
+                    text = widget.get("sel.first", "sel.last")
+            elif isinstance(widget, tk.Entry):
+                if widget.selection_present():
+                    text = widget.selection_get()
+
+            if text:
+                self.clipboard_clear()
+                self.clipboard_append(text)
+        except Exception:
+            pass
+
+    def _cut_widget_selection(self, widget):
+        try:
+            self._copy_widget_selection(widget)
+
+            if isinstance(widget, tk.Text):
+                if widget.tag_ranges("sel"):
+                    widget.delete("sel.first", "sel.last")
+            elif isinstance(widget, tk.Entry):
+                if widget.selection_present():
+                    start = widget.index("sel.first")
+                    end = widget.index("sel.last")
+                    widget.delete(start, end)
+        except Exception:
+            pass
+
+    def _paste_into_widget(self, widget):
+        try:
+            text = self.clipboard_get()
+        except Exception:
+            return
+
+        try:
+            if isinstance(widget, tk.Text):
+                if widget.tag_ranges("sel"):
+                    widget.delete("sel.first", "sel.last")
+                widget.insert("insert", text)
+            elif isinstance(widget, tk.Entry):
+                if widget.selection_present():
+                    start = widget.index("sel.first")
+                    end = widget.index("sel.last")
+                    widget.delete(start, end)
+                widget.insert("insert", text)
+        except Exception:
+            pass
+
+    def _undo_widget(self, widget):
+        try:
+            if isinstance(widget, tk.Text):
+                widget.edit_undo()
+            elif isinstance(widget, tk.Entry):
+                widget.event_generate("<<Undo>>")
+        except Exception:
+            pass
+
+    def _show_text_context_menu(self, event):
+        widget = event.widget
+        if not self._is_text_input_widget(widget):
+            return
+
+        self.context_widget = widget
+        try:
+            self.text_context_menu.tk_popup(event.x_root, event.y_root)
+        finally:
+            self.text_context_menu.grab_release()
+
+    def _context_undo(self):
+        if self.context_widget is not None:
+            self._undo_widget(self.context_widget)
+
+    def _context_copy(self):
+        if self.context_widget is not None:
+            self._copy_widget_selection(self.context_widget)
+
+    def _context_cut(self):
+        if self.context_widget is not None:
+            self._cut_widget_selection(self.context_widget)
+
+    def _context_paste(self):
+        if self.context_widget is not None:
+            self._paste_into_widget(self.context_widget)
+
+    def _context_select_all(self):
+        if self.context_widget is not None:
+            self._select_all_widget(self.context_widget)
+
     def _build_form(self):
         title_label = ctk.CTkLabel(
             self.container,
@@ -73,11 +290,7 @@ class IdeaDialog(ctk.CTkToplevel):
         divider.pack(fill="x", padx=12, pady=(0, 14))
 
         self.title_entry = self._create_entry("Название")
-
-        self.short_description_text = self._create_textbox(
-            "Описание",
-            height=140
-        )
+        self.short_description_text = self._create_textbox("Описание", height=140)
 
         self.genre_menu = self._create_option_menu("Жанр", GENRES, "Неотсортированные")
         self.mechanic_menu = self._create_option_menu("Основная механика", MECHANICS, "Не выбрано")
@@ -88,11 +301,7 @@ class IdeaDialog(ctk.CTkToplevel):
         self.status_menu = self._create_option_menu("Статус", STATUS_OPTIONS, "новая")
 
         self.tags_entry = self._create_entry("Теги через запятую")
-
-        self.notes_text = self._create_textbox(
-            "Заметки",
-            height=140
-        )
+        self.notes_text = self._create_textbox("Заметки", height=140)
 
         self.favorite_var = ctk.BooleanVar(value=False)
         self.favorite_checkbox = ctk.CTkCheckBox(
@@ -113,7 +322,7 @@ class IdeaDialog(ctk.CTkToplevel):
             fg_color=ACCENT,
             hover_color=ACCENT_HOVER,
             text_color=APP_BG,
-            font=ui_font(13, "bold"),
+            font=ui_font(13),
             command=self._save
         )
         save_button.pack(side="left", padx=(0, 10))
@@ -124,51 +333,10 @@ class IdeaDialog(ctk.CTkToplevel):
             fg_color=BUTTON_NEUTRAL,
             hover_color=BUTTON_NEUTRAL_HOVER,
             text_color=APP_BG,
-            font=ui_font(13, "bold"),
+            font=ui_font(13),
             command=self.destroy
         )
         cancel_button.pack(side="left")
-
-    def _bind_text_widget_shortcuts(self, widget):
-        widget.bind("<Control-a>", self._select_all)
-        widget.bind("<Control-A>", self._select_all)
-        widget.bind("<Control-c>", self._copy_selection)
-        widget.bind("<Control-C>", self._copy_selection)
-        widget.bind("<Control-v>", self._paste_selection)
-        widget.bind("<Control-V>", self._paste_selection)
-        widget.bind("<Control-x>", self._cut_selection)
-        widget.bind("<Control-X>", self._cut_selection)
-
-    def _copy_selection(self, event):
-        event.widget.event_generate("<<Copy>>")
-        return "break"
-
-    def _paste_selection(self, event):
-        event.widget.event_generate("<<Paste>>")
-        return "break"
-
-    def _cut_selection(self, event):
-        event.widget.event_generate("<<Cut>>")
-        return "break"
-
-    def _select_all(self, event):
-        widget = event.widget
-
-        if hasattr(widget, "tag_add"):
-            try:
-                widget.tag_add("sel", "1.0", "end")
-                widget.mark_set("insert", "1.0")
-                widget.see("insert")
-            except Exception:
-                pass
-        elif hasattr(widget, "select_range"):
-            try:
-                widget.select_range(0, "end")
-                widget.icursor("end")
-            except Exception:
-                pass
-
-        return "break"
 
     def _fill_form(self):
         self.title_entry.insert(0, self.idea["title"])
@@ -204,8 +372,6 @@ class IdeaDialog(ctk.CTkToplevel):
             font=ui_font(14)
         )
         entry.pack(fill="x", padx=12, pady=(0, 8))
-        self._bind_text_widget_shortcuts(entry)
-
         return entry
 
     def _create_textbox(self, label_text: str, height: int = 100):
@@ -224,10 +390,15 @@ class IdeaDialog(ctk.CTkToplevel):
             text_color=TEXT_PRIMARY,
             border_width=1,
             border_color=CARD_BORDER,
-            font=ui_font(14)
+            font=ui_font(14),
+            undo=True
         )
         textbox.pack(fill="x", padx=12, pady=(0, 8))
-        self._bind_text_widget_shortcuts(textbox)
+
+        try:
+            textbox._textbox.configure(undo=True, autoseparators=True, maxundo=-1)
+        except Exception:
+            pass
 
         return textbox
 
