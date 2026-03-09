@@ -1,3 +1,4 @@
+import random
 import uuid
 from copy import deepcopy
 from datetime import datetime
@@ -60,3 +61,74 @@ class IdeaManager:
         idea["favorite"] = not idea["favorite"]
         idea["updated_at"] = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         return True
+
+    def filter_ideas(
+        self,
+        query: str = "",
+        genre: Optional[str] = None,
+        status: Optional[str] = None,
+        readiness: Optional[str] = None,
+        mechanic: Optional[str] = None,
+        favorites_only: bool = False,
+    ) -> List[Dict]:
+        query = query.strip().lower()
+        filtered = []
+
+        for idea in self.ideas:
+            if favorites_only and not idea["favorite"]:
+                continue
+
+            if genre and idea["genre"] != genre:
+                continue
+
+            if status and idea["status"] != status:
+                continue
+
+            if readiness and idea["readiness"] != readiness:
+                continue
+
+            if mechanic and idea["mechanic"] != mechanic:
+                continue
+
+            if query:
+                searchable_text = " ".join([
+                    idea["title"],
+                    idea["hook"],
+                    idea["short_description"],
+                ]).lower()
+
+                if query not in searchable_text:
+                    continue
+
+            filtered.append(idea)
+
+        return filtered
+
+    def sort_ideas(self, ideas: List[Dict], sort_mode: str) -> List[Dict]:
+        def parse_date(date_string: str) -> datetime:
+            try:
+                return datetime.strptime(date_string, "%Y-%m-%d %H:%M:%S")
+            except ValueError:
+                return datetime.min
+
+        if sort_mode == "Сначала старые":
+            return sorted(ideas, key=lambda idea: parse_date(idea["created_at"]))
+
+        if sort_mode == "Недавно изменённые":
+            return sorted(ideas, key=lambda idea: parse_date(idea["updated_at"]), reverse=True)
+
+        if sort_mode == "По названию (А-Я)":
+            return sorted(ideas, key=lambda idea: idea["title"].lower())
+
+        if sort_mode == "По названию (Я-А)":
+            return sorted(ideas, key=lambda idea: idea["title"].lower(), reverse=True)
+
+        return sorted(ideas, key=lambda idea: parse_date(idea["created_at"]), reverse=True)
+
+    def get_random_idea(self, ideas: Optional[List[Dict]] = None) -> Optional[Dict]:
+        pool = ideas if ideas is not None else self.ideas
+
+        if not pool:
+            return None
+
+        return random.choice(pool)

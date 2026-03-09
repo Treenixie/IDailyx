@@ -2,6 +2,7 @@ import customtkinter as ctk
 from functools import partial
 from tkinter import messagebox
 
+from core.constants import STATUS_OPTIONS, READINESS_OPTIONS, MECHANICS
 from core.storage import save_ideas
 from ui.dialogs import IdeaDialog
 
@@ -11,13 +12,15 @@ class MainWindow(ctk.CTk):
         super().__init__()
 
         self.title("IDailyx")
-        self.geometry("1400x800")
-        self.minsize(1100, 650)
+        self.geometry("1450x860")
+        self.minsize(1180, 700)
 
         self.idea_manager = idea_manager
         self.data_file = data_file
-        self.ideas = self.idea_manager.get_all()
         self.selected_idea = None
+        self.filtered_ideas = []
+        self.current_sidebar_filter = "Все идеи"
+        self.sidebar_buttons = {}
 
         ctk.set_appearance_mode("dark")
         ctk.set_default_color_theme("blue")
@@ -25,7 +28,8 @@ class MainWindow(ctk.CTk):
         self.configure(fg_color="#16181d")
 
         self._build_layout()
-        self._fill_idea_list()
+        self._update_sidebar_button_styles()
+        self.apply_filters()
 
     def _build_layout(self):
         self.grid_columnconfigure(1, weight=1)
@@ -58,23 +62,73 @@ class MainWindow(ctk.CTk):
             text="IDailyx",
             font=ctk.CTkFont(size=24, weight="bold")
         )
-        title_label.grid(row=0, column=0, padx=16, pady=14, sticky="w")
+        title_label.grid(row=0, column=0, padx=16, pady=(14, 8), sticky="w")
 
         self.search_entry = ctk.CTkEntry(
             self.top_bar,
             placeholder_text="Поиск идей..."
         )
-        self.search_entry.grid(row=0, column=1, padx=10, pady=14, sticky="ew")
+        self.search_entry.grid(row=0, column=1, padx=10, pady=(14, 8), sticky="ew")
+        self.search_entry.bind("<KeyRelease>", self._on_search_change)
 
         self.new_button = ctk.CTkButton(
             self.top_bar,
             text="+ Новая идея",
             command=self.open_add_dialog
         )
-        self.new_button.grid(row=0, column=2, padx=10, pady=14)
+        self.new_button.grid(row=0, column=2, padx=10, pady=(14, 8))
 
-        self.random_button = ctk.CTkButton(self.top_bar, text="Случайная идея")
-        self.random_button.grid(row=0, column=3, padx=(0, 16), pady=14)
+        self.random_button = ctk.CTkButton(
+            self.top_bar,
+            text="Случайная идея",
+            command=self.show_random_idea
+        )
+        self.random_button.grid(row=0, column=3, padx=(0, 16), pady=(14, 8))
+
+        filters_frame = ctk.CTkFrame(self.top_bar, fg_color="transparent")
+        filters_frame.grid(row=1, column=0, columnspan=4, sticky="ew", padx=16, pady=(0, 14))
+
+        self.status_menu = ctk.CTkOptionMenu(
+            filters_frame,
+            values=["Все статусы"] + STATUS_OPTIONS,
+            command=self._on_filter_change,
+            width=170
+        )
+        self.status_menu.pack(side="left", padx=(0, 8))
+        self.status_menu.set("Все статусы")
+
+        self.readiness_menu = ctk.CTkOptionMenu(
+            filters_frame,
+            values=["Вся проработка"] + READINESS_OPTIONS,
+            command=self._on_filter_change,
+            width=190
+        )
+        self.readiness_menu.pack(side="left", padx=(0, 8))
+        self.readiness_menu.set("Вся проработка")
+
+        self.mechanic_menu = ctk.CTkOptionMenu(
+            filters_frame,
+            values=["Все механики"] + MECHANICS,
+            command=self._on_filter_change,
+            width=210
+        )
+        self.mechanic_menu.pack(side="left", padx=(0, 8))
+        self.mechanic_menu.set("Все механики")
+
+        self.sort_menu = ctk.CTkOptionMenu(
+            filters_frame,
+            values=[
+                "Сначала новые",
+                "Сначала старые",
+                "Недавно изменённые",
+                "По названию (А-Я)",
+                "По названию (Я-А)",
+            ],
+            command=self._on_filter_change,
+            width=190
+        )
+        self.sort_menu.pack(side="right")
+        self.sort_menu.set("Сначала новые")
 
     def _build_sidebar(self):
         title = ctk.CTkLabel(
@@ -105,9 +159,11 @@ class MainWindow(ctk.CTk):
                 text=category,
                 anchor="w",
                 fg_color="#242936",
-                hover_color="#2d3442"
+                hover_color="#2d3442",
+                command=partial(self.set_sidebar_filter, category)
             )
             button.pack(fill="x", padx=12, pady=4)
+            self.sidebar_buttons[category] = button
 
     def _build_center_panel(self):
         title = ctk.CTkLabel(
@@ -154,28 +210,28 @@ class MainWindow(ctk.CTk):
         self.details_text.insert("1.0", "Здесь будут показаны подробности выбранной идеи.")
         self.details_text.configure(state="disabled")
 
-    def _fill_idea_list(self):
+    def _fill_idea_list(self, ideas: list[dict]):
         for widget in self.idea_listbox.winfo_children():
             widget.destroy()
 
-        self.ideas = self.idea_manager.get_all()
-
-        if not self.ideas:
+        if not ideas:
             empty_label = ctk.CTkLabel(
                 self.idea_listbox,
-                text="Идей пока нет. Добавь первую через кнопку «+ Новая идея».",
+                text="Ничего не найдено. Попробуй изменить поиск или фильтры.",
                 text_color="#aeb7c5"
             )
             empty_label.pack(anchor="w", padx=8, pady=8)
             return
 
-        for idea in self.ideas:
+        for idea in ideas:
             card = ctk.CTkFrame(self.idea_listbox, corner_radius=14, fg_color="#242936")
             card.pack(fill="x", padx=4, pady=6)
 
+            title_text = f'★ {idea["title"]}' if idea["favorite"] else idea["title"]
+
             title = ctk.CTkLabel(
                 card,
-                text=idea["title"],
+                text=title_text,
                 font=ctk.CTkFont(size=16, weight="bold")
             )
             title.pack(anchor="w", padx=12, pady=(10, 2))
@@ -204,6 +260,71 @@ class MainWindow(ctk.CTk):
 
     def _handle_idea_click(self, idea: dict, event=None):
         self.show_idea_details(idea)
+
+    def _on_search_change(self, event=None):
+        self.apply_filters()
+
+    def _on_filter_change(self, _value=None):
+        self.apply_filters()
+
+    def set_sidebar_filter(self, category: str):
+        self.current_sidebar_filter = category
+        self._update_sidebar_button_styles()
+        self.apply_filters()
+
+    def _update_sidebar_button_styles(self):
+        for category, button in self.sidebar_buttons.items():
+            if category == self.current_sidebar_filter:
+                button.configure(fg_color="#2f6db2", hover_color="#3c7ccc")
+            else:
+                button.configure(fg_color="#242936", hover_color="#2d3442")
+
+    def apply_filters(self):
+        query = self.search_entry.get().strip()
+
+        genre = None
+        favorites_only = False
+
+        if self.current_sidebar_filter == "Избранное":
+            favorites_only = True
+        elif self.current_sidebar_filter != "Все идеи":
+            genre = self.current_sidebar_filter
+
+        status = self.status_menu.get()
+        if status == "Все статусы":
+            status = None
+
+        readiness = self.readiness_menu.get()
+        if readiness == "Вся проработка":
+            readiness = None
+
+        mechanic = self.mechanic_menu.get()
+        if mechanic == "Все механики":
+            mechanic = None
+
+        filtered = self.idea_manager.filter_ideas(
+            query=query,
+            genre=genre,
+            status=status,
+            readiness=readiness,
+            mechanic=mechanic,
+            favorites_only=favorites_only,
+        )
+
+        filtered = self.idea_manager.sort_ideas(filtered, self.sort_menu.get())
+        self.filtered_ideas = filtered
+
+        self._fill_idea_list(filtered)
+
+        if self.selected_idea is not None:
+            visible_ids = {idea["id"] for idea in filtered}
+
+            if self.selected_idea["id"] not in visible_ids:
+                self.clear_details()
+            else:
+                updated_selected = self.idea_manager.get_by_id(self.selected_idea["id"])
+                if updated_selected is not None:
+                    self.show_idea_details(updated_selected)
 
     def show_idea_details(self, idea: dict):
         self.selected_idea = idea
@@ -251,7 +372,7 @@ class MainWindow(ctk.CTk):
         new_idea = self.idea_manager.add_idea(idea_data)
         save_ideas(self.data_file, self.idea_manager.get_all())
 
-        self._fill_idea_list()
+        self.apply_filters()
         self.show_idea_details(new_idea)
 
     def open_edit_dialog(self):
@@ -271,7 +392,7 @@ class MainWindow(ctk.CTk):
             return
 
         save_ideas(self.data_file, self.idea_manager.get_all())
-        self._fill_idea_list()
+        self.apply_filters()
         self.show_idea_details(updated_idea)
 
     def delete_selected_idea(self):
@@ -293,5 +414,14 @@ class MainWindow(ctk.CTk):
             return
 
         save_ideas(self.data_file, self.idea_manager.get_all())
-        self._fill_idea_list()
+        self.apply_filters()
         self.clear_details()
+
+    def show_random_idea(self):
+        random_idea = self.idea_manager.get_random_idea(self.filtered_ideas)
+
+        if random_idea is None:
+            messagebox.showinfo("Случайная идея", "Нет идей для выбора.")
+            return
+
+        self.show_idea_details(random_idea)
