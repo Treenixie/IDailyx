@@ -1,5 +1,6 @@
 import customtkinter as ctk
 from functools import partial
+from tkinter import messagebox
 
 from core.storage import save_ideas
 from ui.dialogs import IdeaDialog
@@ -127,6 +128,27 @@ class MainWindow(ctk.CTk):
         )
         self.details_title.pack(anchor="w", padx=16, pady=(16, 8))
 
+        self.details_buttons_frame = ctk.CTkFrame(self.details_panel, fg_color="transparent")
+        self.details_buttons_frame.pack(fill="x", padx=12, pady=(0, 8))
+
+        self.edit_button = ctk.CTkButton(
+            self.details_buttons_frame,
+            text="Редактировать",
+            command=self.open_edit_dialog,
+            state="disabled"
+        )
+        self.edit_button.pack(side="left", padx=(0, 8))
+
+        self.delete_button = ctk.CTkButton(
+            self.details_buttons_frame,
+            text="Удалить",
+            fg_color="#8B3A3A",
+            hover_color="#A04444",
+            command=self.delete_selected_idea,
+            state="disabled"
+        )
+        self.delete_button.pack(side="left")
+
         self.details_text = ctk.CTkTextbox(self.details_panel, wrap="word")
         self.details_text.pack(fill="both", expand=True, padx=12, pady=(0, 12))
         self.details_text.insert("1.0", "Здесь будут показаны подробности выбранной идеи.")
@@ -186,6 +208,8 @@ class MainWindow(ctk.CTk):
     def show_idea_details(self, idea: dict):
         self.selected_idea = idea
         self.details_title.configure(text=idea["title"])
+        self.edit_button.configure(state="normal")
+        self.delete_button.configure(state="normal")
 
         details = (
             f'Ключевая фишка: {idea["hook"]}\n\n'
@@ -209,6 +233,17 @@ class MainWindow(ctk.CTk):
         self.details_text.insert("1.0", details)
         self.details_text.configure(state="disabled")
 
+    def clear_details(self):
+        self.selected_idea = None
+        self.details_title.configure(text="Выбери идею")
+        self.edit_button.configure(state="disabled")
+        self.delete_button.configure(state="disabled")
+
+        self.details_text.configure(state="normal")
+        self.details_text.delete("1.0", "end")
+        self.details_text.insert("1.0", "Здесь будут показаны подробности выбранной идеи.")
+        self.details_text.configure(state="disabled")
+
     def open_add_dialog(self):
         IdeaDialog(self, self.handle_add_idea)
 
@@ -218,3 +253,45 @@ class MainWindow(ctk.CTk):
 
         self._fill_idea_list()
         self.show_idea_details(new_idea)
+
+    def open_edit_dialog(self):
+        if self.selected_idea is None:
+            messagebox.showwarning("Предупреждение", "Сначала выбери идею.")
+            return
+
+        IdeaDialog(self, self.handle_edit_idea, idea=self.selected_idea)
+
+    def handle_edit_idea(self, updated_data: dict):
+        if self.selected_idea is None:
+            return
+
+        updated_idea = self.idea_manager.update_idea(self.selected_idea["id"], updated_data)
+        if updated_idea is None:
+            messagebox.showerror("Ошибка", "Не удалось обновить идею.")
+            return
+
+        save_ideas(self.data_file, self.idea_manager.get_all())
+        self._fill_idea_list()
+        self.show_idea_details(updated_idea)
+
+    def delete_selected_idea(self):
+        if self.selected_idea is None:
+            messagebox.showwarning("Предупреждение", "Сначала выбери идею.")
+            return
+
+        confirm = messagebox.askyesno(
+            "Удаление идеи",
+            f'Удалить идею "{self.selected_idea["title"]}"?'
+        )
+
+        if not confirm:
+            return
+
+        was_deleted = self.idea_manager.delete_idea(self.selected_idea["id"])
+        if not was_deleted:
+            messagebox.showerror("Ошибка", "Не удалось удалить идею.")
+            return
+
+        save_ideas(self.data_file, self.idea_manager.get_all())
+        self._fill_idea_list()
+        self.clear_details()

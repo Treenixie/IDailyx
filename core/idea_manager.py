@@ -31,6 +31,20 @@ class IdeaManager:
                 return idea
         return None
 
+    def update_idea(self, idea_id: str, updated_data: Dict) -> Optional[Dict]:
+        idea = self.get_by_id(idea_id)
+        if idea is None:
+            return None
+
+        protected_fields = {"id", "created_at"}
+
+        for key, value in updated_data.items():
+            if key not in protected_fields:
+                idea[key] = value
+
+        idea["updated_at"] = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        return idea
+
     def delete_idea(self, idea_id: str) -> bool:
         for index, idea in enumerate(self.ideas):
             if idea["id"] == idea_id:

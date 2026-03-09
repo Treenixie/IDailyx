@@ -13,12 +13,14 @@ from core.constants import (
 
 
 class IdeaDialog(ctk.CTkToplevel):
-    def __init__(self, master, on_save):
+    def __init__(self, master, on_save, idea=None):
         super().__init__(master)
 
         self.on_save = on_save
+        self.idea = idea
+        self.is_edit_mode = idea is not None
 
-        self.title("Новая идея")
+        self.title("Редактирование идеи" if self.is_edit_mode else "Новая идея")
         self.geometry("720x760")
         self.minsize(620, 600)
         self.configure(fg_color="#16181d")
@@ -37,12 +39,16 @@ class IdeaDialog(ctk.CTkToplevel):
         self.container.grid(row=0, column=0, sticky="nsew", padx=16, pady=16)
 
         self._build_form()
+
+        if self.is_edit_mode:
+            self._fill_form()
+
         self.after(100, lambda: self.title_entry.focus())
 
     def _build_form(self):
         title_label = ctk.CTkLabel(
             self.container,
-            text="Новая идея",
+            text="Редактирование идеи" if self.is_edit_mode else "Новая идея",
             font=ctk.CTkFont(size=22, weight="bold")
         )
         title_label.pack(anchor="w", padx=12, pady=(12, 16))
@@ -96,6 +102,23 @@ class IdeaDialog(ctk.CTkToplevel):
             command=self.destroy
         )
         cancel_button.pack(side="left")
+
+    def _fill_form(self):
+        self.title_entry.insert(0, self.idea["title"])
+        self.hook_entry.insert(0, self.idea["hook"])
+        self.short_description_text.insert("1.0", self.idea["short_description"])
+
+        self.genre_menu.set(self.idea["genre"])
+        self.mechanic_menu.set(self.idea["mechanic"])
+        self.scale_menu.set(self.idea["scale"])
+        self.perspective_menu.set(self.idea["perspective"])
+        self.platform_menu.set(self.idea["platform"])
+        self.readiness_menu.set(self.idea["readiness"])
+        self.status_menu.set(self.idea["status"])
+
+        self.tags_entry.insert(0, ", ".join(self.idea["tags"]))
+        self.notes_text.insert("1.0", self.idea["notes"])
+        self.favorite_var.set(self.idea["favorite"])
 
     def _create_entry(self, label_text: str):
         label = ctk.CTkLabel(self.container, text=label_text)
