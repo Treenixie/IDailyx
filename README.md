@@ -1,40 +1,15 @@
-# IDailyx
+<p align="center">
+  <img src="assets/logo.png" alt="IDailyx logo" width="320">
+</p>
 
-![Python](https://img.shields.io/badge/Python-3776AB?style=flat-square&logo=python&logoColor=white)
-![CustomTkinter](https://img.shields.io/badge/CustomTkinter-1F6AA5?style=flat-square&logo=python&logoColor=white)
-![JSON](https://img.shields.io/badge/JSON-4B5563?style=flat-square&logoColor=white)
-![GitHub](https://img.shields.io/badge/GitHub-181717?style=flat-square&logo=github&logoColor=white)
+<p align="center">
+  <img src="https://img.shields.io/badge/Python-3776AB?style=for-the-badge&logo=python&logoColor=white" alt="Python">
+  <img src="https://img.shields.io/badge/CustomTkinter-1F6AA5?style=for-the-badge" alt="CustomTkinter">
+  <img src="https://img.shields.io/badge/JSON-000000?style=for-the-badge&logo=json&logoColor=white" alt="JSON">
+  <img src="https://img.shields.io/badge/GitHub-181717?style=for-the-badge&logo=github&logoColor=white" alt="GitHub">
+</p>
 
-**IDailyx** — десктопное приложение на **Python** для хранения, сортировки и редактирования игровых идей.  
-Интерфейс разработан с помощью **CustomTkinter**, данные сохраняются в **JSON**, разработка велась в **PyCharm**.
-
-## Запуск
-
-```bash
-pip install -r requirements.txt
-python main.py
-```
-
-## Структура проекта
-
-```text
-IDailyx/
-├── .gitattributes
-├── .gitignore
-├── main.py
-├── README.md
-├── requirements.txt
-├── core/
-│   ├── constants.py
-│   ├── idea_manager.py
-│   └── storage.py
-├── data/
-│   ├── ideas.json
-└── ui/
-    ├── dialogs.py
-    ├── main_window.py
-    └── styles.py
-```
+**IDailyx** — десктопное приложение на **Python** для хранения, сортировки и редактирования игровых идей. Интерфейс создан с помощью **CustomTkinter**, данные сохраняются в **JSON**, разработка велась в **PyCharm**.
 
 ## Возможности
 
@@ -50,25 +25,25 @@ IDailyx/
 
 ### Жанры
 
-- Шутеры
-- Платформеры
-- Головоломки
-- Хорроры
-- Рогалики
-- Приключения
-- Стратегии
-- Симуляторы
-- Мультиплеер
-- Неотсортированные
+- Шутеры;
+- Платформеры;
+- Головоломки;
+- Хорроры;
+- Рогалики;
+- Приключения;
+- Стратегии;
+- Симуляторы;
+- Мультиплеер;
+- Неотсортированные.
 
 ### Дополнительные параметры
 
-- **Основная механика**: стрельба, паркур, скрытность, исследование, выживание, менеджмент, выборы и последствия, строительство, коллекционирование, кооперация
-- **Масштаб**: маленькая, средняя, большая
-- **Перспектива**: 2D, 3D, от первого лица, от третьего лица, изометрия, top-down, текстовая
-- **Платформа**: PC, mobile, console, browser
-- **Проработка**: черновая идея, готово к прототипу
-- **Статус**: новая, в работе, заморожена, завершена
+- **Основная механика**: стрельба, паркур, скрытность, исследование, выживание, менеджмент, выборы и последствия, строительство, коллекционирование, кооперация;
+- **Масштаб**: маленькая, средняя, большая;
+- **Перспектива**: 2D, 3D, от первого лица, от третьего лица, изометрия, top-down, текстовая;
+- **Платформа**: PC, mobile, console, browser;
+- **Проработка**: черновая идея, готово к прототипу;
+- **Статус**: новая, в работе, заморожена, завершена.
 
 ## Поля идеи
 
@@ -91,4 +66,7 @@ IDailyx/
 
 ##
 
-Постоянная ссылка на GitHub проекта: https://github.com/Treenixie/IDailyx
+Постоянная ссылка на репозиторий приложения: https://github.com/Treenixie/IDailyx
+
+<sub>Итоговый проект реализован в рамках дисциплины "Программирование на языке Python" для Высшей Школы Экономики, 2 курс, 3 модуль.<br>
+Учебный студенческий проект на серьёзность и важность не претендует. :)</sub>
