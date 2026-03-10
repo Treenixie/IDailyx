@@ -1,60 +1,76 @@
 import os
 import sys
+from pathlib import Path
 
 from core.idea_manager import IdeaManager
 from core.storage import load_ideas, ensure_data_file
-from core.paths import get_ideas_file_path, get_legacy_ideas_file_path
+from core.paths import (
+    get_ideas_file_path,
+    get_legacy_ideas_file_path,
+    get_old_appdata_ideas_file_path,
+)
 
 
 DATA_FILE = str(get_ideas_file_path())
 
 
 def configure_tk_environment():
-    if "TCL_LIBRARY" in os.environ and "TK_LIBRARY" in os.environ:
+    if getattr(sys, "frozen", False):
         return
 
-    tcl_root = os.path.join(sys.base_prefix, "tcl")
+    tcl_root = Path(sys.base_prefix) / "tcl"
 
-    if not os.path.isdir(tcl_root):
+    if not tcl_root.is_dir():
+        os.environ.pop("TCL_LIBRARY", None)
+        os.environ.pop("TK_LIBRARY", None)
         return
 
     tcl_dir = None
     tk_dir = None
 
-    for folder_name in os.listdir(tcl_root):
-        full_path = os.path.join(tcl_root, folder_name)
-
-        if not os.path.isdir(full_path):
+    for folder in tcl_root.iterdir():
+        if not folder.is_dir():
             continue
 
-        if folder_name.startswith("tcl8"):
-            tcl_dir = full_path
-        elif folder_name.startswith("tk8"):
-            tk_dir = full_path
+        if folder.name.startswith("tcl8"):
+            tcl_dir = folder
+        elif folder.name.startswith("tk8"):
+            tk_dir = folder
 
-    if tcl_dir:
-        os.environ["TCL_LIBRARY"] = tcl_dir
+    if tcl_dir is not None:
+        os.environ["TCL_LIBRARY"] = str(tcl_dir)
+    else:
+        os.environ.pop("TCL_LIBRARY", None)
 
-    if tk_dir:
-        os.environ["TK_LIBRARY"] = tk_dir
+    if tk_dir is not None:
+        os.environ["TK_LIBRARY"] = str(tk_dir)
+    else:
+        os.environ.pop("TK_LIBRARY", None)
 
 
-def migrate_legacy_ideas_file() -> None:
-    legacy_file = get_legacy_ideas_file_path()
+def migrate_ideas_file() -> None:
     current_file = get_ideas_file_path()
 
-    if current_file.exists() or not legacy_file.exists():
+    if current_file.exists():
         return
 
     current_file.parent.mkdir(parents=True, exist_ok=True)
 
-    try:
-        current_file.write_text(
-            legacy_file.read_text(encoding="utf-8"),
-            encoding="utf-8"
-        )
-    except OSError:
-        pass
+    migration_sources = [
+        get_old_appdata_ideas_file_path(),
+        get_legacy_ideas_file_path(),
+    ]
+
+    for source_file in migration_sources:
+        try:
+            if source_file.exists() and source_file.resolve() != current_file.resolve():
+                current_file.write_text(
+                    source_file.read_text(encoding="utf-8"),
+                    encoding="utf-8",
+                )
+                return
+        except OSError:
+            continue
 
 
 configure_tk_environment()
@@ -64,7 +80,7 @@ from ui.window_utils import set_app_user_model_id
 
 
 def bootstrap_data():
-    migrate_legacy_ideas_file()
+    migrate_ideas_file()
     ensure_data_file(DATA_FILE)
     return load_ideas(DATA_FILE)
 

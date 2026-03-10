@@ -1,5 +1,4 @@
 from pathlib import Path
-import os
 import sys
 
 
@@ -16,9 +15,16 @@ def get_base_path() -> Path:
     return get_project_root()
 
 
+def get_runtime_root() -> Path:
+    if getattr(sys, "frozen", False):
+        return Path(sys.executable).resolve().parent
+    return get_project_root()
+
+
 def get_asset_path(filename: str) -> str | None:
     candidates = [
         get_base_path() / "assets" / filename,
+        get_runtime_root() / "assets" / filename,
         get_base_path() / filename,
     ]
 
@@ -29,18 +35,17 @@ def get_asset_path(filename: str) -> str | None:
     return None
 
 
-def get_user_data_dir() -> Path:
-    if os.name == "nt":
-        appdata = os.environ.get("APPDATA")
-        if appdata:
-            return Path(appdata) / APP_NAME
-
-    return Path.home() / f".{APP_NAME.lower()}"
+def get_data_dir() -> Path:
+    return get_runtime_root() / "data"
 
 
 def get_ideas_file_path() -> Path:
-    return get_user_data_dir() / "ideas.json"
+    return get_data_dir() / "ideas.json"
 
 
 def get_legacy_ideas_file_path() -> Path:
     return get_project_root() / "data" / "ideas.json"
+
+
+def get_old_appdata_ideas_file_path() -> Path:
+    return Path.home() / "AppData" / "Roaming" / APP_NAME / "ideas.json"
