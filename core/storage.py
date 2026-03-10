@@ -1,34 +1,41 @@
 import json
-import os
+from pathlib import Path
 from typing import List, Dict
 
 
-def ensure_data_file(path: str) -> None:
-    folder = os.path.dirname(path)
-
-    if folder and not os.path.exists(folder):
-        os.makedirs(folder)
-
-    if not os.path.exists(path):
-        with open(path, "w", encoding="utf-8") as file:
-            json.dump([], file, ensure_ascii=False, indent=4)
+def _normalize_path(path: str | Path) -> Path:
+    return Path(path)
 
 
-def load_ideas(path: str) -> List[Dict]:
-    ensure_data_file(path)
+def ensure_data_file(path: str | Path) -> None:
+    file_path = _normalize_path(path)
+
+    file_path.parent.mkdir(parents=True, exist_ok=True)
+
+    if not file_path.exists():
+        file_path.write_text("[]", encoding="utf-8")
+
+
+def load_ideas(path: str | Path) -> List[Dict]:
+    file_path = _normalize_path(path)
+    ensure_data_file(file_path)
 
     try:
-        with open(path, "r", encoding="utf-8") as file:
-            data = json.load(file)
-            if isinstance(data, list):
-                return data
-            return []
+        data = json.loads(file_path.read_text(encoding="utf-8"))
+
+        if isinstance(data, list):
+            return data
+
+        return []
     except (json.JSONDecodeError, OSError):
         return []
 
 
-def save_ideas(path: str, ideas: List[Dict]) -> None:
-    ensure_data_file(path)
+def save_ideas(path: str | Path, ideas: List[Dict]) -> None:
+    file_path = _normalize_path(path)
+    ensure_data_file(file_path)
 
-    with open(path, "w", encoding="utf-8") as file:
-        json.dump(ideas, file, ensure_ascii=False, indent=4)
+    file_path.write_text(
+        json.dumps(ideas, ensure_ascii=False, indent=4),
+        encoding="utf-8",
+    )

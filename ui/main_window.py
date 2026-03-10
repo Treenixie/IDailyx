@@ -5,11 +5,11 @@ import tkinter as tk
 import customtkinter as ctk
 from PIL import Image
 
-from ui.window_utils import get_asset_path, apply_window_icon
-
 from core.constants import STATUS_OPTIONS, READINESS_OPTIONS, MECHANICS
+from core.paths import get_asset_path
 from core.storage import save_ideas
 from ui.dialogs import IdeaDialog
+from ui.window_utils import apply_window_icon
 from ui.styles import (
     APP_BG,
     PANEL_BG,
@@ -70,7 +70,7 @@ class MainWindow(ctk.CTk):
 
         self._load_brand_assets()
         self._build_layout()
-        self.after(100, lambda: apply_window_icon(self, delay_ms=0))
+        self.after(50, lambda: apply_window_icon(self))
         self._setup_global_shortcuts()
         self._setup_mousewheel_support()
         self._update_sidebar_button_styles()
@@ -481,6 +481,7 @@ class MainWindow(ctk.CTk):
 
     def _get_focused_text_widget(self, event=None):
         widget = self.focus_get()
+
         if self._is_text_input_widget(widget):
             return widget
 
@@ -817,7 +818,7 @@ class MainWindow(ctk.CTk):
         self._clear_details_content()
         placeholder = ctk.CTkLabel(
             self.details_content,
-            text="Здесь будут показаны подробности идеи.",
+            text="Здесь будут показаны подробности выбранной идеи.",
             text_color=TEXT_PRIMARY,
             justify="left",
             anchor="w",

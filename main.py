@@ -3,9 +3,10 @@ import sys
 
 from core.idea_manager import IdeaManager
 from core.storage import load_ideas, ensure_data_file
+from core.paths import get_ideas_file_path, get_legacy_ideas_file_path
 
 
-DATA_FILE = "data/ideas.json"
+DATA_FILE = str(get_ideas_file_path())
 
 
 def configure_tk_environment():
@@ -38,6 +39,24 @@ def configure_tk_environment():
         os.environ["TK_LIBRARY"] = tk_dir
 
 
+def migrate_legacy_ideas_file() -> None:
+    legacy_file = get_legacy_ideas_file_path()
+    current_file = get_ideas_file_path()
+
+    if current_file.exists() or not legacy_file.exists():
+        return
+
+    current_file.parent.mkdir(parents=True, exist_ok=True)
+
+    try:
+        current_file.write_text(
+            legacy_file.read_text(encoding="utf-8"),
+            encoding="utf-8"
+        )
+    except OSError:
+        pass
+
+
 configure_tk_environment()
 
 from ui.main_window import MainWindow
@@ -45,6 +64,7 @@ from ui.window_utils import set_app_user_model_id
 
 
 def bootstrap_data():
+    migrate_legacy_ideas_file()
     ensure_data_file(DATA_FILE)
     return load_ideas(DATA_FILE)
 

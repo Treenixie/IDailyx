@@ -3,8 +3,6 @@ from tkinter import messagebox
 import tkinter as tk
 import customtkinter as ctk
 
-from ui.window_utils import apply_window_icon
-
 from core.constants import (
     GENRES,
     MECHANICS,
@@ -29,6 +27,7 @@ from ui.styles import (
     LINE_COLOR,
     ui_font,
 )
+from ui.window_utils import apply_window_icon
 
 
 class IdeaDialog(ctk.CTkToplevel):
@@ -56,7 +55,7 @@ class IdeaDialog(ctk.CTkToplevel):
 
         self.transient(master)
         self.grab_set()
-        self.after(100, lambda: apply_window_icon(self, delay_ms=0))
+        self.after(50, lambda: apply_window_icon(self))
 
         self._setup_global_shortcuts()
 

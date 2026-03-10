@@ -1,29 +1,13 @@
 import os
 import ctypes
-from typing import Iterable
+import tkinter as tk
 
 from PIL import Image, ImageTk
 
+from core.paths import get_asset_path
+
 
 DEFAULT_APP_ID = "Treenixie.IDailyx"
-
-
-def get_project_root() -> str:
-    return os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-
-
-def get_asset_path(filename: str) -> str | None:
-    root = get_project_root()
-    candidates = [
-        os.path.join(root, "assets", filename),
-        os.path.join(root, filename),
-    ]
-
-    for path in candidates:
-        if os.path.exists(path):
-            return path
-
-    return None
 
 
 def set_app_user_model_id(app_id: str = DEFAULT_APP_ID):
@@ -32,78 +16,93 @@ def set_app_user_model_id(app_id: str = DEFAULT_APP_ID):
 
     try:
         ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID(app_id)
-    except Exception as exc:
-        print(f"[IDailyx] AppUserModelID error: {exc}")
+    except Exception:
+        pass
 
 
-def _iter_icon_candidates(filenames: Iterable[str]) -> list[str]:
-    result: list[str] = []
-
-    for filename in filenames:
-        path = get_asset_path(filename)
-        if path and path not in result:
-            result.append(path)
-
-    return result
-
-
-def apply_window_icon(window, delay_ms: int = 0):
-    icon_candidates = _iter_icon_candidates(("icon.ico", "icon.png", "logo.png"))
-
-    if not icon_candidates:
-        print("[IDailyx] Icon file not found")
-        return
-
-    if os.name == "nt":
-        set_app_user_model_id()
-
-    if hasattr(window, "_iconbitmap_method_called"):
-        try:
-            window._iconbitmap_method_called = True
-        except Exception:
-            pass
-
-    for icon_path in icon_candidates:
-        try:
-            pil_icon = Image.open(icon_path)
-            window._window_icon_photo = ImageTk.PhotoImage(pil_icon)
-            window.iconphoto(True, window._window_icon_photo)
-            break
-        except Exception as exc:
-            print(f"[IDailyx] iconphoto error for {os.path.basename(icon_path)}: {exc}")
-    else:
-        window._window_icon_photo = None
-
+def apply_windows_dark_title_bar(window):
     if os.name != "nt":
         return
 
-    icon_ico_path = get_asset_path("icon.ico")
-    if not icon_ico_path:
-        print("[IDailyx] icon.ico not found for Windows title bar")
+    try:
+        window.update_idletasks()
+        hwnd = window.winfo_id()
+    except Exception:
         return
 
-    def _apply_iconbitmap():
+    value = ctypes.c_int(1)
+
+    for attribute in (20, 19):
         try:
+            ctypes.windll.dwmapi.DwmSetWindowAttribute(
+                hwnd,
+                attribute,
+                ctypes.byref(value),
+                ctypes.sizeof(value),
+            )
+            break
+        except Exception:
+            continue
 
-            window.iconbitmap(icon_ico_path)
-        except Exception as first_error:
-            try:
 
-                window.iconbitmap(default=icon_ico_path)
-            except Exception as second_error:
-                print(
-                    "[IDailyx] iconbitmap error: "
-                    f"{first_error}; fallback error: {second_error}"
-                )
+def _apply_iconbitmap(window):
+    icon_ico_path = get_asset_path("icon.ico")
+    if not icon_ico_path:
+        return
 
-    delays = [
-        max(delay_ms, 250),
-        max(delay_ms, 500),
-        max(delay_ms, 900),
-    ]
-
-    for ms in delays:
+    try:
+        window.iconbitmap(icon_ico_path)
+    except Exception:
         try:
-            window.after(ms, _apply_iconbitmap)
-        except Exception as exc:
-            print(f"[IDailyx] after({ms}) icon apply error: {exc}")
+            window.iconbitmap(default=icon_ico_path)
+        except Exception:
+            pass
+
+
+def _apply_iconphoto(window):
+    icon_png_path = get_asset_path("icon.png")
+    if not icon_png_path:
+        return
+
+    try:
+        pil_image = Image.open(icon_png_path)
+        photo = ImageTk.PhotoImage(pil_image)
+
+        # Сохраняем ссылку, чтобы иконка не исчезла из-за сборщика мусора
+        window._idailyx_icon_photo = photo
+
+        window.iconphoto(True, photo)
+    except Exception:
+        pass
+
+
+def _apply_icon_once(window, app_id: str):
+    if os.name != "nt":
+        return
+
+    set_app_user_model_id(app_id)
+
+    try:
+        window.update_idletasks()
+    except Exception:
+        pass
+
+    _apply_iconbitmap(window)
+    _apply_iconphoto(window)
+    apply_windows_dark_title_bar(window)
+
+
+def apply_window_icon(window, app_id: str = DEFAULT_APP_ID):
+    if os.name != "nt":
+        return
+
+    # Первый проход
+    _apply_icon_once(window, app_id)
+
+    # Повторяем позже, потому что CustomTkinter любит
+    # поверх нашей иконки снова воткнуть свою синюю дефолтную.
+    try:
+        window.after(100, lambda: _apply_icon_once(window, app_id))
+        window.after(300, lambda: _apply_icon_once(window, app_id))
+    except Exception:
+        pass
